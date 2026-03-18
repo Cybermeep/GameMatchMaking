@@ -1,46 +1,53 @@
 package com.gamematchmaker.steam.model;
 
-/**
- * Lightweight data models for raw Steam API responses.
+/*
+ * SteamModels.java
  *
- * These are Steam-layer DTOs — they represent exactly what the Steam API
- * returns and are intentionally separate from the application's domain
- * models (User, Game, Achievement). The importer classes convert these
- * into domain objects.
+ *
+ *   Each inner class holds exactly the data that one Steam API response
+ *   returns. SteamProfile is profile data only. SteamGame is game library
+ *   data only. They don't mix concerns. If Steam changes their profile API,
+ *   only SteamProfile changes. If they change the games API, only SteamGame
+ *   changes. Four classes, four separate reasons to change.
+
  */
 public final class SteamModels {
 
+    // This class is a named container for the inner classes below.
+    // Nobody should ever create a SteamModels instance.
     private SteamModels() {}
 
-    // =========================================================================
-    // SteamProfile — from ISteamUser/GetPlayerSummaries
-    // =========================================================================
+    // SteamProfile
+    // Source API: ISteamUser/GetPlayerSummaries/v2
+    // Used by: FR 3.1.1 (login), FR 3.1.15 (view another user's profile)
 
     /**
-     * Public profile data returned by Steam's GetPlayerSummaries endpoint.
+     * A Steam user's public profile — name, avatar, visibility state.
      * Populated after successful OpenID authentication (FR 3.1.1).
+     *
+     * All fields are final: once a profile is created it cannot be modified.
+     * If the profile changes, create a new SteamProfile with updated data.
      */
     public static class SteamProfile {
 
-        /** 64-bit Steam Community ID as a string. */
+        // Steam's unique 64-bit account identifier, stored as String
+        // because it exceeds int range (up to 76561198999999999)
         public final String steamId;
 
-        /** Steam display name (persona name). */
+        // The display name the user set in Steam (not their login username)
         public final String personaName;
 
-        /** URL to the user's full-size avatar image. */
+        // URL to their full-size (184x184) avatar image
         public final String avatarFull;
 
-        /** URL to the user's Steam Community profile page. */
+        // Link to their Steam Community profile page
         public final String profileUrl;
 
-        /**
-         * Profile visibility: 1 = Private, 2 = Friends Only, 3 = Public.
-         * Game library import requires visibility == 3.
-         */
+        // 1 = Private, 2 = Friends Only, 3 = Public
+        // Must be 3 to allow library import (see isPublic() below)
         public final int communityVisibilityState;
 
-        /** Unix timestamp of the user's last logoff from Steam. */
+        // When they last signed out of Steam (seconds since Jan 1, 1970)
         public final long lastLogoff;
 
         public SteamProfile(String steamId, String personaName, String avatarFull,
@@ -53,7 +60,11 @@ public final class SteamModels {
             this.lastLogoff               = lastLogoff;
         }
 
-        /** Returns true if the profile is publicly visible (required for library import). */
+        /**
+         * Abstraction helper — returns true if this profile is public.
+         * Hides the "== 3" detail from callers; they just ask isPublic().
+         * We need this to be true before we can import the game library.
+         */
         public boolean isPublic() {
             return communityVisibilityState == 3;
         }
@@ -64,29 +75,29 @@ public final class SteamModels {
         }
     }
 
-    // =========================================================================
-    // SteamGame — from IPlayerService/GetOwnedGames and GetRecentlyPlayedGames
-    // =========================================================================
+    // SteamGame
+    // Source API: IPlayerService/GetOwnedGames or GetRecentlyPlayedGames
+    // Used by: FR 3.1.2 (import library), FR 3.1.13 (resync library)
 
     /**
-     * A single entry from the user's Steam game library.
-     * Populated by ImportSteam during library import (FR 3.1.2, 3.1.13).
+     * One game from a user's Steam library.
+     * Steam identifies every game by a numeric AppID
      */
     public static class SteamGame {
 
-        /** Steam AppID (unique identifier for the game). */
+        // Steam's unique AppID for this game
         public final String appId;
 
-        /** Display name of the game (present when include_appinfo=true). */
+        // Display name — only populated when include_appinfo=true was sent
         public final String name;
 
-        /** Icon hash — use SteamConstants.iconUrl() to build the full URL. */
+        // Hash to build the icon URL — pass to SteamConstants.iconUrl()
         public final String imgIconUrl;
 
-        /** Total minutes played across all time. */
+        // Total minutes ever played across all time
         public final int playtimeForever;
 
-        /** Minutes played in the last two weeks (0 if not recently played). */
+        // Minutes played in the last two weeks (0 if not recently active)
         public final int playtime2Weeks;
 
         public SteamGame(String appId, String name, String imgIconUrl,
@@ -98,40 +109,44 @@ public final class SteamModels {
             this.playtime2Weeks  = playtime2Weeks;
         }
 
-        /** Convenience: playtime in hours (rounded down). */
+        /**
+         * Abstraction helper — converts playtime from minutes to hours.
+         * Integer division in Java rounds down automatically.
+         */
         public int playtimeHours() {
             return playtimeForever / 60;
         }
 
         @Override
         public String toString() {
-            return "SteamGame{appId='" + appId + "', name='" + name + "', playtime=" + playtimeForever + "min}";
+            return "SteamGame{appId='" + appId + "', name='" + name
+                    + "', playtime=" + playtimeForever + "min}";
         }
     }
 
-    // =========================================================================
-    // SteamAchievement — from ISteamUserStats/GetPlayerAchievements
-    // =========================================================================
+    // SteamAchievement
+    // Source API: ISteamUserStats/GetPlayerAchievements/v1
+    // Used by: 3.1.22 (compare achievements in a group)
 
     /**
-     * A single achievement entry for a user in a specific game.
-     * Used by FR 3.1.22 (Compare Achievements in a Group).
+     * One achievement for a user in a specific game.
+     * Requires both steamId AND gameAppId to fetch.
      */
     public static class SteamAchievement {
 
-        /** Internal API name (unique within the game). */
+        // Internal key Steam uses to identify this achievement (e.g. "ACH_WIN_1")
         public final String apiName;
 
-        /** Human-readable display name. */
+        // Friendly name shown to players (e.g. "First Blood")
         public final String displayName;
 
-        /** Description of how to earn the achievement. */
+        // Description of how to earn it
         public final String description;
 
-        /** True if this user has earned the achievement. */
+        // Whether this specific user has earned it
         public final boolean achieved;
 
-        /** Unix timestamp when the achievement was unlocked (0 if not achieved). */
+        // Timestamp when they earned it (0 = not yet earned)
         public final long unlockTime;
 
         public SteamAchievement(String apiName, String displayName, String description,
@@ -149,23 +164,23 @@ public final class SteamModels {
         }
     }
 
-    // =========================================================================
-    // SteamFriend — from ISteamUser/GetFriendList
-    // =========================================================================
+    // SteamFriend
+    // Source API: ISteamUser/GetFriendList/v1
+    // Used by: 3.1.25 (retrieve mutual friends)
 
     /**
-     * A single entry from a user's Steam friend list.
-     * Used by FR 3.1.25 (Retrieve Mutual Friends).
+     * One entry from a user's Steam friend list.
+     * Only contains the friend's SteamID — call fetchProfile() to get name/avatar.
      */
     public static class SteamFriend {
 
-        /** The friend's 64-bit SteamID. */
+        // The SteamID of this friend
         public final String steamId;
 
-        /** Relationship type — typically "friend". */
+        // Always "friend" for our queries (we filter by relationship=friend)
         public final String relationship;
 
-        /** Unix timestamp when the friendship was established. */
+        // Unix timestamp of when this friendship was established
         public final long friendSince;
 
         public SteamFriend(String steamId, String relationship, long friendSince) {

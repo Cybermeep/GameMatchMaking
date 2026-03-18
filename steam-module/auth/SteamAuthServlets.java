@@ -10,11 +10,10 @@ import java.io.IOException;
 import java.util.*;
 import java.util.logging.*;
 
-// =============================================================================
 // GET /auth/steam/login
 // Step 1 — Redirect the user's browser to Steam's OpenID login page.
 // FR 3.1.1
-// =============================================================================
+
 @WebServlet(name = "SteamLoginServlet", urlPatterns = "/auth/steam/login")
 class SteamLoginServlet extends HttpServlet {
 
@@ -42,11 +41,11 @@ class SteamLoginServlet extends HttpServlet {
     }
 }
 
-// =============================================================================
 // GET /auth/steam/callback
 // Step 2+3 — Validate Steam's callback, fetch profile, create session.
 // FR 3.1.1
-// =============================================================================
+
+
 @WebServlet(name = "SteamCallbackServlet", urlPatterns = "/auth/steam/callback")
 class SteamCallbackServlet extends HttpServlet {
 
@@ -108,10 +107,10 @@ class SteamCallbackServlet extends HttpServlet {
     }
 }
 
-// =============================================================================
 // GET /auth/steam/logout
 // Invalidates the session and returns the user to the home page.
-// =============================================================================
+
+
 @WebServlet(name = "SteamLogoutServlet", urlPatterns = "/auth/steam/logout")
 class SteamLogoutServlet extends HttpServlet {
     @Override

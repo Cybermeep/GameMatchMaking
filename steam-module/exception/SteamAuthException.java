@@ -1,20 +1,22 @@
 package com.gamematchmaker.steam.exception;
 
-/**
- * Thrown when the Steam OpenID authentication flow fails —
- * either due to a network error communicating with Steam's
- * OpenID/OAuth endpoints, or because Steam returned an invalid
- * or forged callback response.
+/*
+ * SteamAuthException.java
  *
- * Callers should catch this and redirect the user to a friendly
- * error page (SRS §3.2.2 — handle errors with tact).
+ *   This exception represents one specific failure category: the Steam
+ *   OpenID login flow failed. It is separate from SteamApiException
+ *   (which covers API call failures). Each has one reason to change.
  */
 public class SteamAuthException extends Exception {
 
+    // Simple constructor for when we just have a message
     public SteamAuthException(String message) {
         super(message);
     }
 
+    // Constructor that wraps another exception (cause chaining).
+    // "cause" lets us preserve the original IOException or SteamApiException
+    // without forcing callers to know about those internal types.
     public SteamAuthException(String message, Throwable cause) {
         super(message, cause);
     }

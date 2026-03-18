@@ -1,33 +1,31 @@
 package com.gamematchmaker.steam.util;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Minimal JSON field extractor for parsing Steam API responses.
+/*
+ * JsonParser.java
  *
- * Steam API responses are well-structured and predictable, so a
- * lightweight regex-based approach is used here to avoid requiring
- * an external JSON library dependency in the steam module.
- *
- * Replace with Jackson or Gson in any production build that already
- * includes those dependencies — just swap out the method bodies.
- *
- * All methods are static and stateless.
+ *   extract field values from a JSON string.
+ *   It does NOT make HTTP calls, does NOT create domain objects — those
+ *   are SteamHttpClient's and SteamApiClient's jobs respectively.
+
  */
 public final class JsonParser {
 
+    // Private constructor — pure utility class, never instantiated
     private JsonParser() {}
 
     /**
-     * Extracts the string or numeric value of a named JSON field.
+     * Pulls out the value of a named field from a JSON string.
      *
-     * Handles both quoted string values:   "key":"value"
-     * and bare numeric values:             "key":12345
+     * Handles both  "key": "value"  (string)
+     * and           "key": 12345   (number)
      *
-     * @param json  The JSON text to search.
-     * @param key   The field name to look for.
-     * @return The field's value as a String, or {@code null} if not found.
+     * Returns null if the field isn't found.
+     * Example: field(json, "personaname") returns "Jeff"
      */
     public static String field(String json, String key) {
         if (json == null || key == null) return null;
@@ -39,47 +37,62 @@ public final class JsonParser {
     }
 
     /**
-     * Same as {@link #field} but returns an {@code int}, defaulting to 0
-     * if the field is absent or not parseable.
+     * Same as field(), but converts the result to an int.
+     * Returns 0 if the field is missing or not a valid number.
+     * Example: intField(json, "playtime_forever") returns 120
      */
     public static int intField(String json, String key) {
-        String v = field(json, key);
-        if (v == null) return 0;
-        try { return Integer.parseInt(v); } catch (NumberFormatException e) { return 0; }
+        String value = field(json, key);
+        if (value == null) return 0;
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /**
-     * Same as {@link #field} but returns a {@code long}, defaulting to 0L.
+     * Same as field(), but converts to a long.
+     * Used for Unix timestamps and 64-bit SteamIDs, which overflow int.
      */
     public static long longField(String json, String key) {
-        String v = field(json, key);
-        if (v == null) return 0L;
-        try { return Long.parseLong(v); } catch (NumberFormatException e) { return 0L; }
+        String value = field(json, key);
+        if (value == null) return 0L;
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
     }
 
     /**
-     * Returns true if the named field has the value {@code "1"} or {@code "true"}.
+     * Returns true if the field value is "1" or "true".
+     * Steam uses 1/0 for booleans (e.g. "achieved": 1).
      */
     public static boolean boolField(String json, String key) {
-        String v = field(json, key);
-        return "1".equals(v) || "true".equalsIgnoreCase(v);
+        String value = field(json, key);
+        return "1".equals(value) || "true".equalsIgnoreCase(value);
     }
 
     /**
-     * Returns all JSON object blocks (top-level {...}) from a JSON array or
-     * response body that contain a specific key. Used for iterating over
-     * arrays of game or achievement objects in Steam API responses.
+     * Finds all flat JSON objects {...} inside a larger JSON string that
+     * contain a specific key. Used to iterate over arrays of objects in
+     * Steam API responses (e.g. the "games" array in GetOwnedGames).
      *
-     * @param json      The JSON text to search.
-     * @param anchorKey A key that must be present inside each block to match.
-     * @return Array of matching JSON object strings.
+     * Example: objectsContaining(json, "appid") returns each game block
+     * as its own string that can be passed back to field() individually.
+     *
+     * Note: This only matches non-nested objects (no {} inside {}).
+     * Steam's API responses fit within that constraint for our use cases.
      */
     public static String[] objectsContaining(String json, String anchorKey) {
         if (json == null) return new String[0];
         Pattern p = Pattern.compile("\\{[^{}]*\"" + Pattern.quote(anchorKey) + "\"[^{}]*\\}");
         Matcher m = p.matcher(json);
-        java.util.List<String> blocks = new java.util.ArrayList<>();
-        while (m.find()) blocks.add(m.group());
+        List<String> blocks = new ArrayList<>();
+        while (m.find()) {
+            blocks.add(m.group());
+        }
         return blocks.toArray(new String[0]);
     }
 }

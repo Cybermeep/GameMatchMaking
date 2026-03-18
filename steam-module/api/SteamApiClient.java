@@ -9,65 +9,57 @@ import com.gamematchmaker.steam.util.SteamHttpClient;
 import java.util.*;
 import java.util.logging.Logger;
 
-/**
- * Single point of contact for all Steam Web API calls.
+/*
+ * SteamApiClient.java
  *
- * Holds the API key and translates raw HTTP responses into typed
- * {@link com.gamematchmaker.steam.model.SteamModels} objects.
- * All parsing is delegated to {@link JsonParser}; all networking is
- * delegated to {@link SteamHttpClient}.
+ *  One responsibility: translate Steam API HTTP calls into typed Java
+ *   objects. It does NOT manage sessions, handle authentication flow, or
+ *   persist data — those are other classes' jobs. One reason to change:
+ *   if Steam changes their API response structure.
  *
- * This class is intentionally free of business logic — it only knows
- * how to call Steam and parse what comes back.
- *
- * Supports:
- *   FR 3.1.2  — Import Steam Game Library      (fetchOwnedGames)
- *   FR 3.1.13 — Resynchronize Game Library     (fetchRecentlyPlayedGames)
- *   FR 3.1.15 — Retrieve another user's profile (fetchProfiles)
- *   FR 3.1.22 — Compare Achievements           (fetchAchievements)
- *   FR 3.1.25 — Retrieve Mutual Friends         (fetchFriendList)
+
  */
 public class SteamApiClient {
 
     private static final Logger LOGGER = Logger.getLogger(SteamApiClient.class.getName());
 
+    // The Steam Web API key — required for every request.
+    // Get yours at: https://steamcommunity.com/dev/apikey
+    // Read from environment variable — never hard-code (SRS §3.2.3).
     private final String apiKey;
 
     /**
-     * @param apiKey Your Steam Web API key.
-     *               Obtain one at https://steamcommunity.com/dev/apikey
-     *               Never hard-code this — read from an environment variable.
+     * Constructor.
+     * Throws immediately if the key is null/blank — we catch misconfiguration
+     * at startup rather than getting cryptic 401 errors at request time.
      */
     public SteamApiClient(String apiKey) {
         if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalArgumentException("Steam API key must not be null or blank.");
+            throw new IllegalArgumentException("Steam API key is required.");
         }
         this.apiKey = apiKey;
     }
 
-    // =========================================================================
-    // Player Summaries  (FR 3.1.1, FR 3.1.15)
-    // =========================================================================
+    // FR 3.1.1 / FR 3.1.15 — Player profiles
 
     /**
-     * Fetches public profile data for one or more Steam users.
+     * Gets public profile data for a list of Steam users.
      *
-     * Steam accepts up to {@value SteamConstants#MAX_IDS_PER_BATCH} SteamIDs
-     * per request. This method handles batching automatically.
+     * Steam allows up to MAX_IDS_PER_BATCH (100) IDs per request.
+     * This method automatically batches larger lists into multiple calls
+     * and combines the results — callers never need to think about batching.
      *
-     * @param steamIds One or more 64-bit SteamID strings.
-     * @return List of {@link SteamProfile} objects (may be shorter than input if
-     *         some profiles are private or do not exist).
+     * Returns an empty list if steamIds is null or empty (no crash, no exception).
      */
     public List<SteamProfile> fetchProfiles(List<String> steamIds) throws SteamApiException {
         if (steamIds == null || steamIds.isEmpty()) return Collections.emptyList();
 
-        List<SteamProfile> all = new ArrayList<>();
+        List<SteamProfile> allProfiles = new ArrayList<>();
 
-        // Batch in groups of MAX_IDS_PER_BATCH
+        // Batch in groups of 100 to stay within Steam's per-request limit
         for (int i = 0; i < steamIds.size(); i += SteamConstants.MAX_IDS_PER_BATCH) {
-            List<String> batch = steamIds.subList(i,
-                    Math.min(i + SteamConstants.MAX_IDS_PER_BATCH, steamIds.size()));
+            List<String> batch = steamIds.subList(
+                    i, Math.min(i + SteamConstants.MAX_IDS_PER_BATCH, steamIds.size()));
 
             Map<String, String> params = new LinkedHashMap<>();
             params.put("key",      apiKey);
@@ -76,36 +68,37 @@ public class SteamApiClient {
 
             String url  = SteamHttpClient.appendParams(SteamConstants.ENDPOINT_PLAYER_SUMMARIES, params);
             String json = SteamHttpClient.get(url);
-            all.addAll(parseProfiles(json));
+
+            // Factory method: parseProfiles decides how to construct SteamProfile objects
+            allProfiles.addAll(parseProfiles(json));
         }
 
-        LOGGER.info("Fetched " + all.size() + " profiles.");
-        return all;
+        LOGGER.info("Fetched " + allProfiles.size() + " profiles.");
+        return allProfiles;
     }
 
     /**
-     * Convenience overload for a single SteamID.
+     * Convenience overload for a single user.
+     * Wraps the list version and returns the first result, or null.
      */
     public SteamProfile fetchProfile(String steamId) throws SteamApiException {
-        List<SteamProfile> profiles = fetchProfiles(List.of(steamId));
-        return profiles.isEmpty() ? null : profiles.get(0);
+        List<SteamProfile> results = fetchProfiles(List.of(steamId));
+        return results.isEmpty() ? null : results.get(0);
     }
 
-    // =========================================================================
-    // Owned Games  (FR 3.1.2, FR 3.1.13)
-    // =========================================================================
+    // FR 3.1.2 / FR 3.1.13 — Owned and recently played games
 
     /**
-     * Fetches the full owned game library for a Steam user.
+     * Gets the full game library for a user.
      *
-     * @param steamId         The target user's 64-bit SteamID.
-     * @param includeAppInfo  When true, includes game title and icon hash.
-     *                        Should be true for initial import (FR 3.1.2).
-     * @param includeFree     When true, includes free-to-play games the user
-     *                        has ever launched.
-     * @return List of {@link SteamGame} objects sorted by playtime descending.
-     * @throws SteamApiException If the user's profile is private (HTTP 401)
-     *                           or Steam is unavailable.
+     * includeAppInfo: true = response includes game name and icon hash.
+     *   Use true for initial import, false if you only need playtime numbers.
+     *
+     * includeFree: true = include free-to-play titles (Dota 2, CS2, etc.)
+     *   that the user has launched even though they didn't buy them.
+     *
+     * Returns the list sorted by total playtime, most played first.
+     * Throws SteamApiException (status 401) if the library is private.
      */
     public List<SteamGame> fetchOwnedGames(String steamId,
                                            boolean includeAppInfo,
@@ -114,29 +107,25 @@ public class SteamApiClient {
         params.put("key",                       apiKey);
         params.put("steamid",                   steamId);
         params.put("include_appinfo",           includeAppInfo ? "true" : "false");
-        params.put("include_played_free_games", includeFree    ? "true" : "false");
+        params.put("include_played_free_games", includeFree ? "true" : "false");
         params.put("format",                    "json");
 
         String url  = SteamHttpClient.appendParams(SteamConstants.ENDPOINT_OWNED_GAMES, params);
         String json = SteamHttpClient.get(url);
 
+        // Factory method: parseGames constructs the right SteamGame objects
         List<SteamGame> games = parseGames(json);
+
+        // Sort descending by playtime — most played game is first in the list
         games.sort(Comparator.comparingInt((SteamGame g) -> g.playtimeForever).reversed());
 
-        LOGGER.info("Fetched " + games.size() + " owned games for SteamID: " + steamId);
+        LOGGER.info("Fetched " + games.size() + " owned games for: " + steamId);
         return games;
     }
 
-    // =========================================================================
-    // Recently Played Games  (FR 3.1.13 — lighter resync)
-    // =========================================================================
-
     /**
-     * Fetches games the user has played in the last two weeks.
-     * Lighter than a full library sync; useful for incremental resynchronization.
-     *
-     * @param steamId The target user's 64-bit SteamID.
-     * @return List of recently played {@link SteamGame} objects.
+     * Gets only games played in the last 2 weeks — a lighter sync.
+     * Useful for incremental resynchronisation (FR 3.1.13).
      */
     public List<SteamGame> fetchRecentGames(String steamId) throws SteamApiException {
         Map<String, String> params = new LinkedHashMap<>();
@@ -148,21 +137,15 @@ public class SteamApiClient {
         String json = SteamHttpClient.get(url);
 
         List<SteamGame> games = parseGames(json);
-        LOGGER.info("Fetched " + games.size() + " recently played games for SteamID: " + steamId);
+        LOGGER.info("Fetched " + games.size() + " recent games for: " + steamId);
         return games;
     }
 
-    // =========================================================================
-    // Achievements  (FR 3.1.22)
-    // =========================================================================
+    // FR 3.1.22 — Achievements
 
     /**
-     * Fetches all achievements for a specific game for a specific user,
-     * including whether each one has been unlocked.
-     *
-     * @param steamId   The target user's 64-bit SteamID.
-     * @param gameAppId The Steam AppID of the game (e.g. "570" for Dota 2).
-     * @return List of {@link SteamAchievement} objects.
+     * Gets all achievements for a user in a specific game.
+     * gameAppId examples: "570" = Dota 2, "730" = CS2, "440" = TF2.
      */
     public List<SteamAchievement> fetchAchievements(String steamId,
                                                      String gameAppId) throws SteamApiException {
@@ -176,21 +159,17 @@ public class SteamApiClient {
         String json = SteamHttpClient.get(url);
 
         List<SteamAchievement> achievements = parseAchievements(json);
-        LOGGER.info("Fetched " + achievements.size()
-                + " achievements for SteamID: " + steamId + ", AppID: " + gameAppId);
+        LOGGER.info("Fetched " + achievements.size() + " achievements for steamId="
+                + steamId + " appId=" + gameAppId);
         return achievements;
     }
 
-    // =========================================================================
-    // Friend List  (FR 3.1.25)
-    // =========================================================================
+    // FR 3.1.25 — Friend list
 
     /**
-     * Fetches the friend list for a Steam user.
-     * Requires the user's friend list to be publicly visible.
-     *
-     * @param steamId The target user's 64-bit SteamID.
-     * @return List of {@link SteamFriend} objects.
+     * Gets a user's Steam friends as a list of SteamFriend objects.
+     * To find mutual friends, call this for two users and intersect the lists.
+     * Requires the user's friend list to be public.
      */
     public List<SteamFriend> fetchFriendList(String steamId) throws SteamApiException {
         Map<String, String> params = new LinkedHashMap<>();
@@ -203,37 +182,42 @@ public class SteamApiClient {
         String json = SteamHttpClient.get(url);
 
         List<SteamFriend> friends = parseFriends(json);
-        LOGGER.info("Fetched " + friends.size() + " friends for SteamID: " + steamId);
+        LOGGER.info("Fetched " + friends.size() + " friends for: " + steamId);
         return friends;
     }
 
-    // =========================================================================
-    // Parsers — private, each handles one API response shape
-    // =========================================================================
+    // Factory / Parser methods
+    //
+    // Each method is a factory that constructs the right model object from
+    // raw JSON. Callers ask for List<SteamGame> — the factory decides how
+    // to build each SteamGame from the JSON fields.
 
+    // Parses ISteamUser/GetPlayerSummaries response → List<SteamProfile>
     private List<SteamProfile> parseProfiles(String json) {
         List<SteamProfile> profiles = new ArrayList<>();
         for (String block : JsonParser.objectsContaining(json, "steamid")) {
             profiles.add(new SteamProfile(
-                JsonParser.field(block, "steamid"),
-                JsonParser.field(block, "personaname"),
-                JsonParser.field(block, "avatarfull"),
-                JsonParser.field(block, "profileurl"),
+                JsonParser.field(block,    "steamid"),
+                JsonParser.field(block,    "personaname"),
+                JsonParser.field(block,    "avatarfull"),
+                JsonParser.field(block,    "profileurl"),
                 JsonParser.intField(block, "communityvisibilitystate"),
-                JsonParser.longField(block, "lastlogoff")
+                JsonParser.longField(block,"lastlogoff")
             ));
         }
         return profiles;
     }
 
+    // Parses GetOwnedGames / GetRecentlyPlayedGames response → List<SteamGame>
+    // Both endpoints return the same object structure, so one parser handles both
     private List<SteamGame> parseGames(String json) {
         List<SteamGame> games = new ArrayList<>();
         for (String block : JsonParser.objectsContaining(json, "appid")) {
             String name = JsonParser.field(block, "name");
             games.add(new SteamGame(
-                JsonParser.field(block, "appid"),
+                JsonParser.field(block,    "appid"),
                 name != null ? name : "Unknown",
-                JsonParser.field(block, "img_icon_url"),
+                JsonParser.field(block,    "img_icon_url"),
                 JsonParser.intField(block, "playtime_forever"),
                 JsonParser.intField(block, "playtime_2weeks")
             ));
@@ -241,6 +225,7 @@ public class SteamApiClient {
         return games;
     }
 
+    // Parses ISteamUserStats/GetPlayerAchievements response → List<SteamAchievement>
     private List<SteamAchievement> parseAchievements(String json) {
         List<SteamAchievement> achievements = new ArrayList<>();
         for (String block : JsonParser.objectsContaining(json, "apiname")) {
@@ -255,6 +240,7 @@ public class SteamApiClient {
         return achievements;
     }
 
+    // Parses ISteamUser/GetFriendList response → List<SteamFriend>
     private List<SteamFriend> parseFriends(String json) {
         List<SteamFriend> friends = new ArrayList<>();
         for (String block : JsonParser.objectsContaining(json, "steamid")) {

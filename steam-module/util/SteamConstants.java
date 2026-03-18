@@ -1,103 +1,97 @@
 package com.gamematchmaker.steam.util;
 
-/**
- * Central registry of all Steam API constants, endpoint URLs, OpenID
- * strings, and configuration defaults for the steam module.
+/*
+ * SteamConstants.java
  *
- * Every other class in this module reads from here — nothing is
- * hard-coded elsewhere.
+ *   This class has exactly one job: hold all the constant values for the
+ *   steam module. Nothing else lives here, so there is only one reason it
+ *   would ever need to change — if Steam changes a URL or key name.
+ 
  */
 public final class SteamConstants {
 
+    // Private constructor enforces this as a pure constants holder.
+    // Nobody should ever call "new SteamConstants()".
     private SteamConstants() {}
 
-    // =========================================================================
+    // ------------------------------------------------------------------
     // Base URLs
-    // =========================================================================
+    // ------------------------------------------------------------------
 
-    /** Root of all Steam Web API calls. */
+    // Root of all Steam Web API calls
     public static final String API_BASE = "https://api.steampowered.com";
 
-    /** Steam Community base (used for profile URLs and OpenID). */
+    // Steam Community site — used for OpenID and profile pages
     public static final String COMMUNITY_BASE = "https://steamcommunity.com";
 
-    /** Steam OpenID 2.0 login endpoint. */
+    // Where we redirect the user's browser when they click "Login with Steam"
     public static final String OPENID_ENDPOINT = COMMUNITY_BASE + "/openid/login";
 
-    // =========================================================================
-    // Steam Web API Endpoints
-    // =========================================================================
+    // Steam Web API endpoint paths
 
-    /** ISteamUser — GetPlayerSummaries/v2 — public profile data. */
+    // Gets public profile info for one or more users (name, avatar, etc.)
     public static final String ENDPOINT_PLAYER_SUMMARIES =
             API_BASE + "/ISteamUser/GetPlayerSummaries/v2/";
 
-    /** IPlayerService — GetOwnedGames/v1 — full owned game library. */
+    // Gets the full list of games owned by a user
     public static final String ENDPOINT_OWNED_GAMES =
             API_BASE + "/IPlayerService/GetOwnedGames/v1/";
 
-    /** IPlayerService — GetRecentlyPlayedGames/v1 — last-2-weeks games. */
+    // Gets games played in the last 2 weeks (lighter than full library)
     public static final String ENDPOINT_RECENT_GAMES =
             API_BASE + "/IPlayerService/GetRecentlyPlayedGames/v1/";
 
-    /** ISteamUserStats — GetPlayerAchievements/v1 — per-game achievements. */
+    // Gets all achievements for a user in a specific game
     public static final String ENDPOINT_ACHIEVEMENTS =
             API_BASE + "/ISteamUserStats/GetPlayerAchievements/v1/";
 
-    /** ISteamUser — GetFriendList/v1 — friend SteamID list. */
+    // Gets a user's Steam friend list
     public static final String ENDPOINT_FRIEND_LIST =
             API_BASE + "/ISteamUser/GetFriendList/v1/";
 
-    // =========================================================================
-    // OpenID 2.0 Protocol Values
-    // =========================================================================
+    // OpenID 2.0 protocol strings
 
-    /** OpenID namespace URI required by Steam. */
+    // Required namespace for all OpenID requests
     public static final String OPENID_NS = "http://specs.openid.net/auth/2.0";
 
-    /** OpenID mode to initiate a login (redirect user to Steam). */
+    // Mode used to start a login
     public static final String OPENID_MODE_CHECKID = "checkid_setup";
 
-    /** OpenID mode to verify a callback response from Steam. */
+    // Mode used to verify a callback response came from Steam
     public static final String OPENID_MODE_CHECK_AUTH = "check_authentication";
 
-    /** Identifier used in directed identity requests. */
+    // Tells Steam to let the user pick which account to use
     public static final String OPENID_IDENTIFIER_SELECT =
             "http://specs.openid.net/auth/2.0/identifier_select";
 
-    /** URL prefix that Steam appends the 64-bit SteamID to in claimed_id. */
+    // Steam appends the user's 64-bit SteamID to the end of this prefix URL
     public static final String OPENID_CLAIMED_ID_PREFIX =
             COMMUNITY_BASE + "/openid/id/";
 
-    // =========================================================================
-    // Session Keys
-    // =========================================================================
+    // HTTP session attribute keys
 
-    /** HttpSession attribute key for the authenticated user's SteamID string. */
+    // Key for the logged-in user's SteamID string stored in the session
     public static final String SESSION_STEAM_ID = "steamId";
 
-    /** HttpSession attribute key for the full authenticated User object. */
+    // Key for the full SteamProfile object stored in the session
     public static final String SESSION_USER = "authenticatedUser";
 
-    // =========================================================================
-    // HTTP / Networking
-    // =========================================================================
+    // Network settings
 
-    /** Connect and read timeout in milliseconds for all Steam API requests. */
+    // Max time to wait for Steam to respond (8 seconds)
     public static final int HTTP_TIMEOUT_MS = 8_000;
 
-    /** Maximum number of Steam IDs per GetPlayerSummaries batch call. */
+    // Steam's API only accepts up to 100 SteamIDs per GetPlayerSummaries call
     public static final int MAX_IDS_PER_BATCH = 100;
 
-    // =========================================================================
-    // Steam Icon URL helper
-    // =========================================================================
+    // Helper method
 
     /**
-     * Builds the CDN URL for a game's small icon image.
-     * @param appId     Steam AppID (e.g. "570")
-     * @param iconHash  Hash from the API response (img_icon_url field)
-     * @return Full CDN URL, or null if either argument is null.
+     * Builds the CDN URL for a game's icon image.
+     *
+     * Steam gives us a hash string per game icon. This helper turns
+     * that hash + appId into a full image URL. Returns null if either
+     * argument is null (some games don't have icons).
      */
     public static String iconUrl(String appId, String iconHash) {
         if (appId == null || iconHash == null) return null;
