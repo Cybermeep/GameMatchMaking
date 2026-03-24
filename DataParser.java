@@ -1,4 +1,4 @@
-public static class DataParser
+public static abstract class DataParser
 {
     private DataHandler dh;
 
