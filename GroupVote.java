@@ -98,7 +98,7 @@ public class GroupVote{
             System.out.println("No vote to update. Use castVote() first.");
             return false;
         }
-        if(selectedGame == null){
+        if(newGame == null){
             System.out.println("Game not found");
             return false;
         }
