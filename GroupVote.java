@@ -93,8 +93,8 @@ public class GroupVote{
     @param newGame - newGame to vote for
     @return boolean
      */
-    public boolean updateVote(){
-        if(this.game != null){
+    public boolean updateVote(Game newGame){
+        if(this.game == null){
             System.out.println("No vote to update. Use castVote() first.");
             return false;
         }
