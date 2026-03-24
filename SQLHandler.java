@@ -2,7 +2,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
-public class SQLHandler {
+public class SQLHandler extends DataHandler {
     private SessionFactory sessionFactory;
     
     public DataHandler(String serverName, int serverPort, String serverPassword) {
