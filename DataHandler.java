@@ -1,4 +1,4 @@
-public abstract class DataHandler
+public abstract static class DataHandler
 {
     public DataHandler(String serverName, int serverPort, String serverPassword) {
         
