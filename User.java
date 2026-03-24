@@ -7,12 +7,14 @@ public class User {
     private UserDataAccess userData; // why have a UserDataAccess object per user?
     private List<Group> groupData;
     private List<GameAchievement> achievementData;
+    private List<User> friends;
 
     public User(int userID, int steamID, List<Group> groupData, List<GameAchievement> achievementData) {
         this.userID = userID;
         this.steamID = steamID;
         this.groupData = groupData;
         this.achievementData = achievementData;
+        this.friends = new ArrayList<User>();
     }
 
     public int getUserID() { 
@@ -27,6 +29,10 @@ public class User {
     public List<GameAchievement> getAchievementData() { 
         return new ArrayList<>(achievementData);
     }
+    public List<User> getFriends()
+    {
+        return this.friends;
+    }
     
     public void setUserID(int userID) { 
         this.userID = userID;
@@ -39,5 +45,16 @@ public class User {
     }
     public void setAchievementData(List<GameAchievement> achievementData) { 
         this.achievementData = new ArrayList<>(achievementData);
+    }
+    public void addFriend(User newFriend)
+    {
+        if(!friends.contains(newFriend))
+        {
+            this.friends.add(newFriend);
+        }
+    }
+    public void removeFriend(User oldFriend)
+    {
+        this.friends.remove(oldFriend);
     }
 }
