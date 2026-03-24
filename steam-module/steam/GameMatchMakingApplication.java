@@ -4,10 +4,7 @@
  * This application allows Steam users to connect and find games to play together.
  * It integrates with Steam's OAuth for authentication and Steam Web API for
  * game library data.
- * 
- * @author The Match Makers
- * @version 1.0
- * @since 2026-01-22
+
  */
 package edu.isu.gamematch.steam;
 

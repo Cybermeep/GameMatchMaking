@@ -10,8 +10,6 @@
  * - Parse owned games JSON to list of SteamGame objects
  * - Handle API response errors gracefully
  * 
- * @author The Match Makers
- * @version 1.0
  */
 package edu.isu.gamematch.steam;
 

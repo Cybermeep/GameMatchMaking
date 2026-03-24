@@ -11,8 +11,6 @@
  * - Manage user sessions
  * - Serve web pages for the demo
  * 
- * @author The Match Makers
- * @version 1.0
  */
 package edu.isu.gamematch.steam;
 

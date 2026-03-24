@@ -10,9 +10,7 @@
  * - Process authentication callback
  * - Validate Steam OpenID responses
  * - Manage user authentication state
- * 
- * @author The Match Makers
- * @version 1.0
+
  */
 package edu.isu.gamematch.steam;
 

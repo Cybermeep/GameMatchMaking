@@ -10,9 +10,7 @@
  * - Handle API errors and timeouts
  * - Coordinate with SteamDataParser for JSON parsing
  * - Manage API rate limiting
- * 
- * @author The Match Makers
- * @version 1.0
+
  */
 package edu.isu.gamematch.steam;
 

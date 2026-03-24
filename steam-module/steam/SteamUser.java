@@ -10,8 +10,7 @@
  * - Maintain session information for the user
  * - Provide access to user's game library data
  * 
- * @author The Match Makers
- * @version 1.0
+
  */
 package edu.isu.gamematch.steam;
 

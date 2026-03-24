@@ -9,8 +9,7 @@
  * - Track playtime statistics
  * - Provide game identification for matchmaking
  * 
- * @author The Match Makers
- * @version 1.0
+
  */
 package edu.isu.gamematch.steam;
 
