@@ -3,7 +3,7 @@
  * 
  */
 
-import java.util.Timestamp;
+import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -167,7 +167,7 @@ public class GroupVote{
         }
 
         if(tie){
-            System.out.println("Tie has occurred. Do something."); //should we do a revote of the tied games or something else idk i prob have to rewrite later
+            System.out.println("Tie has occurred"); //single responsbility (handle ties by revote in groupsession)
             return null;
         }
         return winner;

@@ -9,7 +9,7 @@ public class Game{
     private int gameID;
     private String gameName;
     private String genre;
-    private int playtime;
+    private int playtimeForever;
     private String steamAppURL;
     private List<Tag> tags;
 
@@ -113,9 +113,24 @@ public class Game{
         return false;
     }
 
+    /*
+    Returns playtime in hours 
+    @return int
+    */
+    public int getPlaytimeHours(){
+        return playtimeForever / 60;
+    }
+
+    //make game from steamGame (factory)
+    public static Game fromSteamGame(Object steamGame) {
+        
+    }
+
+
+
     @Override
     public String toString(){
-        return "Game{" + "gameID=" + gameID + ", gameName'" + gameName + '\'' + ", genre='" + genre + '\'' + ", playtime=" + playtime + " min" + "}";
+        return "Game{" + "gameID=" + gameID + ", gameName'" + gameName + '\'' + ", genre='" + genre + '\'' + ", playtimeForever=" + playtimeForever + " min" + "}";
     }
 
     @Override
@@ -127,7 +142,12 @@ public class Game{
             return false;
         }
         Game other = (Game) o;
-        return this.GameID == other.gameID;
+        return this.gameID == other.gameID;
+    }
+
+    @Override
+    public int hashCode() {
+        return Integer.hashCode(gameID);
     }
 
 }
