@@ -8,19 +8,22 @@ import java.util.List;
 public class Game{
     private int gameID;
     private String gameName;
-    private String genre;
-    private int playtimeForever;
+    private int playtimeForever; //in mins
+    private int playtimeLastTwoWeeks; //use ts for recent playtime calcs
     private String steamAppURL;
-    private List<Tag> tags;
+    private List<String> genres;
+    private List<Tag> tags; //user g enerated tags
 
     public Game(){
+        this.genres = new ArrayList<String>();
         this.tags = new ArrayList<Tag>();
     }
 
-    public Game(int gameID, String gameName, String genre){
+    public Game(int gameID, String gameName, int playtimeForever){
         this.gameID = gameID;
         this.gameName = gameName;
-        this.genre = genre;
+        this.playtimeForever = playtimeForever;
+        this.genres = new ArrayList<String>();
         this.tags = new ArrayList<Tag>();
     }
     
@@ -41,20 +44,20 @@ public class Game{
         this.gameName = gameName;
     }
 
-    public String getGenre(){
-        return genre;
+    public int getPlaytimeForever(){
+        return playtimeForever;
     }
 
-    public void setGenre(String genre){
-        this.genre = genre;
+    public void setPlaytimeForever(int playtimeForever){
+        this.playtimeForever = playtimeForever;
     }
 
-    public int getPlaytime(){
-        return playtime;
+    public int getPlaytimeLastTwoWeeks(){
+        return playtimeLastTwoWeeks;
     }
 
-    public void setPlaytime(int playtime){
-        this.playtime = playtime;
+    public void setPlaytimeLastTwoWeeks(int playtimeLastTwoWeeks){
+        this.playtimeLastTwoWeeks = playtimeLastTwoWeeks;
     }
 
     public String getSteamAppURL(){
@@ -65,6 +68,14 @@ public class Game{
         this.steamAppURL = steamAppURL;
     }
 
+    public List<String> getGenres(){
+        return genres;
+    }
+
+    public void setGenres(List<String> genres){
+        this.genres = genres;
+    }
+
     public List<Tag> getTags(){
         return tags;
     }
@@ -73,64 +84,9 @@ public class Game{
         this.tags = tags;
     }
 
-    //methods
-
-    /*adds tag to game (assuming it's user generated tags I forgot what Tag was supposed to be for)
-    @param tag The tag to add
-    */
-    public void addTag(Tag tag){
-        if(tag == null){
-            return;
-        }
-        for(int i = 0; i < tags.size(); i++){
-            if(tags.get(i).equals(tag)){
-                return; //already in
-            }
-        }
-        tags.add(tag);
-    }
-
-    /*
-    removes tag from game
-    @param tag The tag to remove
-    @return boolean
-    */
-    public boolean removeTag(Tag tag){
-        return tags.remove(tag);
-    }
-
-    /*
-    checks if game has tag matching given tagname
-    @param tagName 
-    @return boolean
-    */
-    public boolean hasTag(String tagName){
-        for(int i = 0; i < tags.size(); i++){
-            if(tags.get(i).getTagName().equalsIgnoreCase(tagName)){
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /*
-    Returns playtime in hours 
-    @return int
-    */
-    public int getPlaytimeHours(){
-        return playtimeForever / 60;
-    }
-
-    //make game from steamGame (factory)
-    public static Game fromSteamGame(Object steamGame) {
-        return null;
-    }
-
-
-
     @Override
     public String toString(){
-        return "Game{" + "gameID=" + gameID + ", gameName'" + gameName + '\'' + ", genre='" + genre + '\'' + ", playtimeForever=" + playtimeForever + " min" + "}";
+        return "Game{" + "gameID=" + gameID + ", gameName'" + gameName + '\'' + ", playtimeForever=" + playtimeForever + " min" + ", playtimeLastTwoWeeks=" + playtimeLastTwoWeeks + " min" + ", genres=" + genres + "}";
     }
 
     @Override
