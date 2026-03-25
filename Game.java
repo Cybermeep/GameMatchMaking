@@ -123,7 +123,7 @@ public class Game{
 
     //make game from steamGame (factory)
     public static Game fromSteamGame(Object steamGame) {
-        
+        return null;
     }
 
 
