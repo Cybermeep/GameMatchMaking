@@ -167,7 +167,7 @@ public class GroupVote{
         }
 
         if(tie){
-            System.out.println("Tie has occurred"); //single responsbility (handle ties by revote in groupsession)
+            System.out.println("Tie has occurred"); //single responsbility (dont handle ties here)
             return null;
         }
         return winner;
