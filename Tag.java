@@ -39,5 +39,40 @@ public class Tag{
         return "Tag{tagName='" + tagName + '\'' + ", game=" + gameLabel + "}";
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o){
+            return true;
+        }
+        if (!(o instanceof Tag)){
+            return false;
+        }
+        Tag other = (Tag) o;
+
+        boolean namesMatch = false;
+        if (tagName != null && other.tagName != null){
+            namesMatch = tagName.equalsIgnoreCase(other.tagName);
+        }
+
+        boolean gamesMatch = false;
+        if (game != null && other.game != null){
+            gamesMatch = game.equals(other.game);
+        }
+
+        return namesMatch && gamesMatch;
+    }
+
+    @Override
+    public int hashCode(){
+        int nameHash = 0;
+        if (tagName != null){
+            nameHash = tagName.toLowerCase().hashCode();
+        }
+        int gameHash = 0;
+        if (game != null){
+            gameHash = game.hashCode();
+        }
+        return 31 * nameHash + gameHash;
+    }
 
 }
