@@ -1,10 +1,10 @@
+package edu.isu.gamematch;
 /*
     Game Class
 */
 
 import java.util.ArrayList;
 import java.util.List;
-import edu.isu.gamematch.Tag;
 
 public class Game{
     private int gameID;

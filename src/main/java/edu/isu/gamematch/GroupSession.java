@@ -1,6 +1,5 @@
+package edu.isu.gamematch;
 import java.time.LocalDateTime;
-import edu.isu.gamematch.Group;
-import edu.isu.gamematch.Game;
 
 public class GroupSession
 {
