@@ -8,6 +8,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.time.LocalDateTime;
+
 
 public class GroupOperations{
     private List<Game> gameList;
@@ -31,12 +34,124 @@ public class GroupOperations{
     //todo group operations [MORE METHODS HERE]
 
 
+    /* 
+    Deletes a group
+    @param Group
+    @return empty group
+    */
+    public Group deleteGroup(Group group){
+        if(group == null){
+            return null;
+        }
+        group.deleteGroup();
+        return group;
+    }
+
+    /*
+    transfers group ownership to a new member
+    @param User
+    @param Group
+    @return User, new owner of group
+    */
+    public User transferGroupOwnership(User newOwner, Group group){
+        if(newOwner == null || group == null){
+            return null;
+        }
+        if(!group.getMembers().contains(newOwner)){
+            System.out.println("transferGroupOwnership: user is not a group member.");
+            return null;
+        }
+        group.setGroupOwner(newOwner);
+        return newOwner;
+    }
+
+    /*
+    generates group invite link to share 
+    @param Group
+    @return String
+    */
+    public String generateGroupInviteLink(Group group){
+        if(group == null) {
+            return null;
+        }
+        //placeholder
+        return "https://placeholder.link/join/" + group.getGroupID();
+    }
+
+    /*
+    removes group member
+    @param User
+    @param Group
+    @return removed user
+    */
+    public User removeGroupMember(User member, Group group){
+        if(member == null || group == null) {
+            return null;
+        }
+        if(!group.getMembers().contains(member)) {
+            System.out.println("removeGroupMember: user is not a group member.");
+            return null;
+        }
+        group.removeGroupMember(member);
+        return member;
+    }
+
+    /*
+    adds group member to group
+    @param User
+    @param Group
+    @return boolean
+    */
+    public boolean addGroupMember(User member, Group group){
+        if(member == null || group == null){
+            return false;
+        }
+        group.addGroupMember(member);
+        return true;
+    }
+
+    /*
+    returns a sorted and filtered copy of the group's game list based on Filter
+    @param Group
+    @param Filter
+    @return List<Game>
+    */
+    public List<Game> requestFilteredGamesList(Group group, Filter filter){
+        if(group == null || filter == null){
+            return new ArrayList<Game>();
+        }
+        //TODO
+
+    }
+
+    /*
+    returns a shuffled copy of the group's game list
+    */
+    public List<Game> randomizeGameList(List<Game> gameList){
+        if(gameList == null){
+            return new ArrayList<Game>();
+        }
+        List<Game> shuffled = new ArrayList<Game>(gameList);
+        Collections.shuffle(shuffled);
+        return shuffled;
+    }
 
 
+    /*
+    initiates game selection vote for a user
+    @param GroupVote
+    @param User
+    @return User 
+    */
+    public User initiateGameSelectionVote(GroupVote vote, User user){
+        if(vote == null || user == null){
+            return null;
+        }
+        vote.setVotedByUserID(user.getUserID());
+        return user;
+    }
 
-
-
-
+    
 
 
 

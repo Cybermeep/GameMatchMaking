@@ -5,34 +5,36 @@ public class GameOperations{
     //game methods
 
     /*adds tag to game (assuming it's user generated tags I forgot what Tag was supposed to be for)
-    @param tag The tag to add
+    @param Tag The tag to add
+    @return Tag
     */
-    public boolean addTag(Game game, Tag tag){
+    public Tag addTag(Game game, Tag tag){
         if(game == null || tag == null){
-            return false;
+            return null;
         }
+        List<Tag> tags = game.getTags();
         for(int i = 0; i < tags.size(); i++){
             if(tags.get(i).equals(tag)){
-                return false; //already in
+                return null; //already in
             }
         }
         tags.add(tag);
-        return true;
+        return tag;
     }
 
     /*
     removes tag from game
     @param tag The tag to remove
-    @return String
+    @return Tag
     */
-    public String removeTag(Game game, String tagName){
+    public Tag removeTag(Game game, String tagName){
         if(game == null || tagName == null){
             return null;
         }        
         List<Tag> tags = game.getTags();
         for(int i = 0; i < tags.size(); i++){
-            if(tags.get(i).getTagName().equalsIgnoreCase(tagName)){
-                String removed = tags.get(i).getTagName();
+            if(tags.get(i).equals(tag)){
+                Tag removed = tags.get(i);
                 tags.remove(i);
                 return removed;
             }
@@ -43,19 +45,19 @@ public class GameOperations{
     /*
     checks if game has tag matching given tagname
     @param tagName 
-    @return boolean
+    @return Tag
     */
-    public boolean hasTag(Game game, String tagName){
-        if(game == null || tagName == null){
-            return false;
-        }      
-        List<Tag> tags = game.getTags();       
+    public Tag hasTag(Game game, String tagName){
+        if(game == null || tag == null){
+            return null;
+        }
+        List<Tag> tags = game.getTags();
         for(int i = 0; i < tags.size(); i++){
-            if(tags.get(i).getTagName().equalsIgnoreCase(tagName)){
-                return true;
+            if(tags.get(i).equals(tag)){
+                return tags.get(i);
             }
         }
-        return false;
+        return null;
     }
 
     /*
