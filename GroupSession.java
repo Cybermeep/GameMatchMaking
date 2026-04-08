@@ -1,3 +1,7 @@
+import java.time.LocalDateTime;
+import edu.isu.gamematch.Group;
+import edu.isu.gamematch.Game;
+
 /**
  * Holds data pertaining to a specific group session.
  */

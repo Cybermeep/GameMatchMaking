@@ -2,7 +2,7 @@
  * GroupVote Class
  * 
  */
-
+package edu.isu.gamematch;
 import java.sql.Timestamp;
 
 public class GroupVote{

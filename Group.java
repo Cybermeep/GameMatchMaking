@@ -1,8 +1,16 @@
+/*
+* Srida Kalidindi
+* A skeleton for the 'Group' class.
+*/
+package edu.isu.gamematch;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.persistence.*;
+@Entity
+@Table(name = "groups")
 public class Group
 {
     //attributes
