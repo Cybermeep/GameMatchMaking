@@ -1,0 +1,15 @@
+edu\isu\gamematch\UserProfile.class
+edu\isu\gamematch\DataParser.class
+edu\isu\gamematch\JSONParser.class
+edu\isu\gamematch\HibernateUtil.class
+edu\isu\gamematch\HibernateTest.class
+edu\isu\gamematch\Achievement.class
+edu\isu\gamematch\DataHandler.class
+edu\isu\gamematch\Game.class
+edu\isu\gamematch\Tag.class
+edu\isu\gamematch\Group.class
+edu\isu\gamematch\GroupVote.class
+edu\isu\gamematch\GroupSession.class
+edu\isu\gamematch\User.class
+edu\isu\gamematch\SQLHandler.class
+edu\isu\gamematch\GameAchievement.class
