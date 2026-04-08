@@ -1,26 +1,52 @@
 package edu.isu.gamematch;
-/*
-* Srida Kalidindi
-* A skeleton for the 'Group' class.
-*/
 
+import javax.persistence.*;
 import java.util.ArrayList;
+import java.util.List;
 
+@Entity
+@Table(name = "groups")
 public class Group
 {
-    //attributes
-    int groupID;
-    ArrayList<User> members;
-    ArrayList<Game> games;
-    User groupOwner;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "group_id")
+    private int groupID;
+
+    @ManyToOne
+    @JoinColumn(name = "owner_id")
+    private User groupOwner;
+
+    @ManyToMany
+    @JoinTable(
+        name = "group_members",
+        joinColumns = @JoinColumn(name = "group_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private List<User> members = new ArrayList<>();
+
+    @ManyToMany
+    @JoinTable(
+        name = "group_games",
+        joinColumns = @JoinColumn(name = "group_id"),
+        inverseJoinColumns = @JoinColumn(name = "game_id")
+    )
+    private List<Game> games = new ArrayList<>();
+
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<GroupSession> sessions = new ArrayList<>();
+
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<GroupVote> votes = new ArrayList<>();
+
+    // Default constructor required by JPA
+    public Group() {
+    }
 
     //constructor
-    public Group(int ID, User owner)
+    public Group(User owner)
     {
-        this.groupID = ID;
         this.groupOwner = owner;
-        this.games = new ArrayList<Game>();
-        this.members = new ArrayList<User>();
     }
 
     //additional methods
@@ -66,6 +92,85 @@ public class Group
     {
         members.add(member);
         return true;
+    }
+
+    // Getters and setters
+    public int getGroupID() {
+        return groupID;
+    }
+
+    public void setGroupID(int groupID) {
+        this.groupID = groupID;
+    }
+
+    public User getGroupOwner() {
+        return groupOwner;
+    }
+
+    public void setGroupOwner(User groupOwner) {
+        this.groupOwner = groupOwner;
+    }
+
+    public List<User> getMembers() {
+        return members;
+    }
+
+    public void setMembers(List<User> members) {
+        this.members = members;
+    }
+
+    public List<Game> getGames() {
+        return games;
+    }
+
+    public void setGames(List<Game> games) {
+        this.games = games;
+    }
+
+    public List<GroupSession> getSessions() {
+        return sessions;
+    }
+
+    public void setSessions(List<GroupSession> sessions) {
+        this.sessions = sessions;
+    }
+
+    public void addSession(GroupSession session) {
+        sessions.add(session);
+        session.setGroup(this);
+    }
+
+    public void removeSession(GroupSession session) {
+        sessions.remove(session);
+        session.setGroup(null);
+    }
+
+    public List<GroupVote> getVotes() {
+        return votes;
+    }
+
+    public void setVotes(List<GroupVote> votes) {
+        this.votes = votes;
+    }
+
+    public void addVote(GroupVote vote) {
+        votes.add(vote);
+        vote.setGroup(this);
+    }
+
+    public void removeVote(GroupVote vote) {
+        votes.remove(vote);
+        vote.setGroup(null);
+    }
+
+    public void addGame(Game game) {
+        if (!games.contains(game)) {
+            games.add(game);
+        }
+    }
+
+    public void removeGame(Game game) {
+        games.remove(game);
     }
 
     //add games?

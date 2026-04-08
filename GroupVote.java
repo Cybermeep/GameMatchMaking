@@ -2,7 +2,7 @@
  * GroupVote Class
  * 
  */
-
+package edu.isu.gamematch;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;

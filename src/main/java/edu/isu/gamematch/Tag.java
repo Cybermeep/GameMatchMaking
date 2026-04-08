@@ -1,9 +1,17 @@
 package edu.isu.gamematch;
-/*
-    Tag Class
-*/
+
+import javax.persistence.*;
+
+@Entity
+@Table(name = "tags")
 public class Tag{
+
+    @Id
+    @Column(name = "tag_name")
     private String tagName;
+
+    @ManyToOne
+    @JoinColumn(name = "game_id")
     private Game game;
 
     public Tag(){}

@@ -7,9 +7,9 @@
         <!-- Oracle SQL Configuration -->
         <property name="hibernate.dialect">org.hibernate.dialect.Oracle12cDialect</property>
         <property name="hibernate.connection.driver_class">oracle.jdbc.OracleDriver</property>
-        <property name="hibernate.connection.url">jdbc:oracle:thin:@localhost:1521:XE</property>
-        <property name="hibernate.connection.username">gamematchmaking</property>
-        <property name="hibernate.connection.password">your_password</property>
+        <property name="hibernate.connection.url">jdbc:oracle:thin:@10.110.10.90:1521:oracle</property>
+        <property name="hibernate.connection.username">IT326S11</property>
+        <property name="hibernate.connection.password">website50</property>
 
         <!-- Connection pool settings -->
         <property name="hibernate.c3p0.min_size">5</property>
@@ -25,11 +25,14 @@
         <property name="hibernate.use_sql_comments">true</property>
 
         <!-- Entity mappings (Hibernate will find annotated classes automatically if in classpath) -->
-        <mapping class="User"/>
-        <mapping class="Game"/>
-        <mapping class="Group"/>
-        <mapping class="GameAchievement"/>
-        <mapping class="Achievement"/>
-        <mapping class="Tag"/>
+        <mapping class="edu.isu.gamematch.User"/>
+        <mapping class="edu.isu.gamematch.Game"/>
+        <mapping class="edu.isu.gamematch.Group"/>
+        <mapping class="edu.isu.gamematch.GameAchievement"/>
+        <mapping class="edu.isu.gamematch.Achievement"/>
+        <mapping class="edu.isu.gamematch.Tag"/>
+        <mapping class="edu.isu.gamematch.GroupVote"/>
+        <mapping class="edu.isu.gamematch.UserProfile"/>
+        <mapping class="edu.isu.gamematch.GroupSession"/>
     </session-factory>
 </hibernate-configuration>

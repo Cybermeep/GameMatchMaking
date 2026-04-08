@@ -1,27 +1,42 @@
 package edu.isu.gamematch;
-/*
- * GroupVote Class
- * 
- */
 
+import javax.persistence.*;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Entity
+@Table(name = "group_votes")
 public class GroupVote{
-    private int voteID; 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "vote_id")
+    private int voteID;
+
+    @ManyToOne
+    @JoinColumn(name = "game_id")
     private Game game;
+
+    @ManyToOne
+    @JoinColumn(name = "group_id", nullable = false)
     private Group group;
+
+    @Column(name = "vote_time")
+    private Timestamp voteTime;
+
+    @Column(name = "timestamp")
     private Timestamp timestamp;
-    private int votedByUserID;
+
+    @ManyToOne
+    @JoinColumn(name = "voted_by_user_id", nullable = false)
+    private User votedByUser;
 
     public GroupVote(){}
 
-    public GroupVote(int voteID, Group group, int votedByUserID){
-        this.voteID = voteID;
+    public GroupVote(Group group, User votedByUser){
         this.group = group;
-        this.votedByUserID = votedByUserID;
+        this.votedByUser = votedByUser;
     }
 
     //getters and setters
@@ -49,6 +64,14 @@ public class GroupVote{
         this.group = group;
     }
 
+    public Timestamp getVoteTime() {
+        return voteTime;
+    }
+
+    public void setVoteTime(Timestamp voteTime) {
+        this.voteTime = voteTime;
+    }
+
     public Timestamp getTimestamp(){
         return timestamp;
     }
@@ -57,12 +80,16 @@ public class GroupVote{
         this.timestamp = timestamp;
     }
 
-    public int getVotedByUserID(){
-        return votedByUserID;
+    public User getVotedByUser(){
+        return votedByUser;
     }
-    
-    public void setVotedByUserID(int votedByUserID){
-        this.votedByUserID = votedByUserID;
+
+    public void setVotedByUser(User votedByUser){
+        this.votedByUser = votedByUser;
+    }
+
+    public int getVotedByUserID(){
+        return votedByUser != null ? votedByUser.getUserID() : 0;
     }
 
     //methods
@@ -115,7 +142,7 @@ public class GroupVote{
     @return Map
      */
     public static Map<Game, Integer> tallyVotes(List<GroupVote> votes){
-        Map<Game, Integer> tally = new HashMap<Game,Integer>();
+        Map<Game, Integer> tally = new HashMap<>();
         if(votes == null || votes.isEmpty()){
             System.out.println("No votes to tally");
             return tally;
@@ -180,6 +207,6 @@ public class GroupVote{
         if(game != null){
             gameLabel = game.getGameName();
         }
-        return "GroupVote{" + "voteID=" + voteID + ", votedByUserID=" + votedByUserID + ", game=" + gameLabel + ", timestamp=" + timestamp + "}";
+        return "GroupVote{" + "voteID=" + voteID + ", votedByUserID=" + votedByUser + ", game=" + gameLabel + ", timestamp=" + timestamp + "}";
     }
 }
