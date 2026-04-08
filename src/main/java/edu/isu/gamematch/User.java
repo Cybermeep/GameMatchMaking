@@ -33,6 +33,9 @@ public class User {
     )
     private List<User> friends;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private UserProfile userProfile;
+
     public User(int userID, int steamID, List<Group> groupData, List<GameAchievement> achievementData) {
         this.userID = userID;
         this.steamID = steamID;
@@ -80,5 +83,16 @@ public class User {
     public void removeFriend(User oldFriend)
     {
         this.friends.remove(oldFriend);
+    }
+
+    public UserProfile getUserProfile() {
+        return userProfile;
+    }
+
+    public void setUserProfile(UserProfile userProfile) {
+        this.userProfile = userProfile;
+        if (userProfile != null) {
+            userProfile.setUser(this);
+        }
     }
 }

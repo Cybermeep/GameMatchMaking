@@ -1,3 +1,4 @@
+package edu.isu.gamematch;
 import javax.persistence.*;
 
 @Entity
