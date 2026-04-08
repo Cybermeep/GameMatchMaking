@@ -4,6 +4,10 @@
 */
 package edu.isu.gamematch;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
 import javax.persistence.*;
 @Entity
 @Table(name = "groups")
@@ -11,8 +15,9 @@ public class Group
 {
     //attributes
     int groupID;
-    ArrayList<User> members;
-    ArrayList<Game> games;
+    Set<User> members;
+    List<Game> games;
+    Set<GroupSession> sessions;
     User groupOwner;
 
     //constructor
@@ -21,14 +26,14 @@ public class Group
         this.groupID = ID;
         this.groupOwner = owner;
         this.games = new ArrayList<Game>();
-        this.members = new ArrayList<User>();
+        this.members = new LinkedHashSet<User>();
+        this.sessions = new LinkedHashSet<GroupSession>();
     }
 
     //additional methods
     public void createGroup()
     {
     }
-
     public void deleteGroup()
     {
         this.groupID = 0;
@@ -37,137 +42,59 @@ public class Group
         this.members = null;
     }
 
-    public boolean transferGroupOwnership(User newOwner)
-    {
-        this.groupOwner = newOwner;
-        return true;
+    // getters and setters, excluding setters for groupID since that should be immutable after creation
+    public int getGroupID() {
+        return groupID;
     }
-
-    public String generateGroupInviteLink()
-    {
-        return "";
+    public Set<User> getMembers() {
+        return members;
     }
-
-    public boolean removeGroupMember(User member)
-    {
-        if(members.contains(member))
-        {
-            members.remove(member);
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    public boolean addGroupMember(User member)
+    public User addGroupMember(User member)
     {
         members.add(member);
-        return true;
+        return member;
     }
-
-    private void getGameData(Game game, double[] totalHours, double[] recentHours, double[] daysSince)
+    public User removeGroupMember(User member)
     {
-        // pulls user data for the game and stores it in the corresponding array
+        members.remove(member);
+        return member;
     }
-    /***
-     * Normalizes an array of doubles:
-     * 1. Optional: Log transforms data to reduce impact of extremely large outliers
-     * 2. Find min/max values in data
-     * 3. Equalizes data scale using min/max scaling
-     * 4. Optional: Inverts scale
-     * 
-     * @param data array of doubles to be normalized
-     * @param logTransform t/f indicates if data should be log transformed
-     * @param invert t/f indicates if scale should be inverted
-     */
-    private void normalize(double[] data, boolean logTransform, boolean invert)
-    {
-        int numMembers = members.size();
-        double max = -999999; double min = 999999;
-        
-        for (int i = 0; i < numMembers; i++)
-        {
-            if (logTransform) data[i] = Math.log1p(data[i]); // not sure if this helps
-            min = Math.min(min, data[i]);
-            max = Math.max(max, data[i]);
-        }
-        
-        double range = max - min;
-        if (range == 0) range += 1;
-        
-        for (int i = 0; i < numMembers; i++)
-        {
-            data[i] = (data[i] - min) / range;
-            if (invert) data[i] = 1.0 - data[i];
-        }
+    public List<Game> getGames() {
+        return games;
     }
-    /***
-     * Takes arrays containing doubles of all group members user data and passes them
-     * for normalization and then finds the average value after. To calculate the final
-     * score, averages are weighted and then added together.
-     * 
-     * @param totalHours array of doubles containing each group members total hours
-     * @param recentHours array of doubles containing each group members recent hours
-     * @param daysSince array of doubles containing each group members days since last played
-     * @return final game score
-     */
-    private double calcGameScore(Game game)
-    {
-        int numMembers = members.size();
-        double avgTotalHours = 0; double avgRecentHours = 0; double avgDaysSince = 0;
-
-        double[] totalHours = new double[numMembers];
-        double[] recentHours = new double[numMembers];
-        double[] daysSince = new double[numMembers];
-        getGameData(game, totalHours, recentHours, daysSince); // fills arrays with relevant data
-
-        // performs min/max scaling so each contributes equally before weighting, and optionally
-        // log transforms? or inverts the scale
-        normalize(totalHours, true, false);
-        normalize(recentHours, true, false);
-        normalize(daysSince, false, true);
-
-        for (int i = 0; i < numMembers; i++)
-        {
-            avgTotalHours += totalHours[i];
-            avgRecentHours += recentHours[i];
-            avgDaysSince += daysSince[i];
-        }
-        avgTotalHours /= numMembers;
-        avgRecentHours /= numMembers;
-        avgDaysSince /= numMembers;
-
-        // placeholder weighting values
-        double weightedScore = 0.5*avgTotalHours + 0.25*avgRecentHours + 0.25*avgDaysSince;
-
-        return weightedScore;
+    public List<Game> setGames(List<Game> games) {
+        this.games = games;
+        return games;
     }
-    /***
-     * Scores each game based on total hours, recent hours, and days since last played
-     * and stores the scores in a ranking array, then uses that to sort the groups games list.
-     */
-    public void rankList()
+    public Game addGame(Game game)
     {
-        int numGames = games.size();
-        ArrayList<Double> ranks = new ArrayList<>();
-
-        for (int i = 0; i < numGames; i++)
-        {
-            ranks.add(calcGameScore(games.get(i)));
-        }
-
-        for (int i = 0; i < numGames; i++)
-        {
-            int maxRank = i;
-            for (int j = i + 1; j < numGames; j++)
-            {
-                if (ranks.get(j) > ranks.get(maxRank)) maxRank = j;
-            }
-
-            Collections.swap(games, i, maxRank);
-            Collections.swap(ranks, i, maxRank);
-        }
+        games.add(game);
+        return game;
+    }
+    public Game removeGame(Game game)
+    {
+        games.remove(game);
+        return game;
+    }
+    public Set<GroupSession> getSessions() {
+        return sessions;
+    }
+    public GroupSession addGroupSession(GroupSession session)
+    {
+        sessions.add(session);
+        return session;
+    }
+    public GroupSession removeGroupSession(GroupSession session)
+    {
+        sessions.remove(session);
+        return session;
+    }
+    public User getGroupOwner() {
+        return groupOwner;
+    }
+    public User setGroupOwner(User newOwner)
+    {
+        this.groupOwner = newOwner;
+        return newOwner;
     }
 }
