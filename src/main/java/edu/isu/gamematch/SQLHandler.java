@@ -660,4 +660,234 @@ public class SQLHandler extends DataHandler {
             session.close();
         }
     }
+
+    // ==================== GROUP SESSION OPERATIONS ====================
+    public boolean createGroupSession(GroupSession session) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        Transaction tx = null;
+        try {
+            tx = hibernateSession.beginTransaction();
+            hibernateSession.persist(session);
+            tx.commit();
+            System.out.println("SQLHandler: GroupSession created successfully");
+            return true;
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+            System.err.println("SQLHandler: Error creating group session - " + e.getMessage());
+            return false;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    public GroupSession getGroupSessionById(int sessionID) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        try {
+            return hibernateSession.get(GroupSession.class, sessionID);
+        } catch (Exception e) {
+            System.err.println("SQLHandler: Error retrieving group session - " + e.getMessage());
+            return null;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    public List<GroupSession> getGroupSessionsByGroup(Group group) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        try {
+            Query<GroupSession> query = hibernateSession.createQuery("FROM GroupSession gs WHERE gs.group = :group", GroupSession.class);
+            query.setParameter("group", group);
+            return query.list();
+        } catch (Exception e) {
+            System.err.println("SQLHandler: Error retrieving group sessions - " + e.getMessage());
+            return null;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    public List<GroupSession> getGroupSessionsByGame(Game game) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        try {
+            Query<GroupSession> query = hibernateSession.createQuery("FROM GroupSession gs WHERE gs.game = :game", GroupSession.class);
+            query.setParameter("game", game);
+            return query.list();
+        } catch (Exception e) {
+            System.err.println("SQLHandler: Error retrieving sessions by game - " + e.getMessage());
+            return null;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    public List<GroupSession> getAllGroupSessions() {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        try {
+            Query<GroupSession> query = hibernateSession.createQuery("FROM GroupSession", GroupSession.class);
+            return query.list();
+        } catch (Exception e) {
+            System.err.println("SQLHandler: Error retrieving all group sessions - " + e.getMessage());
+            return null;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    public boolean updateGroupSession(GroupSession session) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        Transaction tx = null;
+        try {
+            tx = hibernateSession.beginTransaction();
+            hibernateSession.merge(session);
+            tx.commit();
+            System.out.println("SQLHandler: GroupSession updated successfully");
+            return true;
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+            System.err.println("SQLHandler: Error updating group session - " + e.getMessage());
+            return false;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    public boolean deleteGroupSession(GroupSession session) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        Transaction tx = null;
+        try {
+            tx = hibernateSession.beginTransaction();
+            hibernateSession.remove(hibernateSession.merge(session));
+            tx.commit();
+            System.out.println("SQLHandler: GroupSession deleted successfully");
+            return true;
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+            System.err.println("SQLHandler: Error deleting group session - " + e.getMessage());
+            return false;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    // ==================== GROUP VOTE OPERATIONS ====================
+    public boolean createGroupVote(GroupVote vote) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        Transaction tx = null;
+        try {
+            tx = hibernateSession.beginTransaction();
+            hibernateSession.persist(vote);
+            tx.commit();
+            System.out.println("SQLHandler: GroupVote created successfully");
+            return true;
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+            System.err.println("SQLHandler: Error creating group vote - " + e.getMessage());
+            return false;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    public GroupVote getGroupVoteById(int voteID) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        try {
+            return hibernateSession.get(GroupVote.class, voteID);
+        } catch (Exception e) {
+            System.err.println("SQLHandler: Error retrieving group vote - " + e.getMessage());
+            return null;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    public List<GroupVote> getGroupVotesByGroup(Group group) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        try {
+            Query<GroupVote> query = hibernateSession.createQuery("FROM GroupVote gv WHERE gv.group = :group", GroupVote.class);
+            query.setParameter("group", group);
+            return query.list();
+        } catch (Exception e) {
+            System.err.println("SQLHandler: Error retrieving group votes - " + e.getMessage());
+            return null;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    public List<GroupVote> getGroupVotesByGame(Game game) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        try {
+            Query<GroupVote> query = hibernateSession.createQuery("FROM GroupVote gv WHERE gv.game = :game", GroupVote.class);
+            query.setParameter("game", game);
+            return query.list();
+        } catch (Exception e) {
+            System.err.println("SQLHandler: Error retrieving votes by game - " + e.getMessage());
+            return null;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    public List<GroupVote> getVotesByUser(User user) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        try {
+            Query<GroupVote> query = hibernateSession.createQuery("FROM GroupVote gv WHERE gv.votedByUser = :user", GroupVote.class);
+            query.setParameter("user", user);
+            return query.list();
+        } catch (Exception e) {
+            System.err.println("SQLHandler: Error retrieving user votes - " + e.getMessage());
+            return null;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    public List<GroupVote> getAllGroupVotes() {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        try {
+            Query<GroupVote> query = hibernateSession.createQuery("FROM GroupVote", GroupVote.class);
+            return query.list();
+        } catch (Exception e) {
+            System.err.println("SQLHandler: Error retrieving all group votes - " + e.getMessage());
+            return null;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    public boolean updateGroupVote(GroupVote vote) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        Transaction tx = null;
+        try {
+            tx = hibernateSession.beginTransaction();
+            hibernateSession.merge(vote);
+            tx.commit();
+            System.out.println("SQLHandler: GroupVote updated successfully");
+            return true;
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+            System.err.println("SQLHandler: Error updating group vote - " + e.getMessage());
+            return false;
+        } finally {
+            hibernateSession.close();
+        }
+    }
+
+    public boolean deleteGroupVote(GroupVote vote) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        Transaction tx = null;
+        try {
+            tx = hibernateSession.beginTransaction();
+            hibernateSession.remove(hibernateSession.merge(vote));
+            tx.commit();
+            System.out.println("SQLHandler: GroupVote deleted successfully");
+            return true;
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+            System.err.println("SQLHandler: Error deleting group vote - " + e.getMessage());
+            return false;
+        } finally {
+            hibernateSession.close();
+        }
+    }
 }
