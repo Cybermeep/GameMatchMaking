@@ -2,9 +2,14 @@ package edu.isu.gamematch;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "group_sessions")
+/**
+ * Holds data pertaining to a specific group session.
+ */
 public class GroupSession
 {
     @Id
@@ -20,6 +25,14 @@ public class GroupSession
     @JoinColumn(name = "game_id")
     private Game game;
 
+    @ManyToMany
+    @JoinTable(
+        name = "session_members",
+        joinColumns = @JoinColumn(name = "session_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> members = new LinkedHashSet<>();
+
     @Column(name = "start_time")
     private LocalDateTime startTime;
 
@@ -29,43 +42,40 @@ public class GroupSession
     @Column(name = "duration_minutes")
     private int duration;
 
+    @Column(name = "active")
+    private boolean active;
+
     // Default constructor required by JPA
     public GroupSession() {
     }
 
-    public GroupSession(Group group, Game game, LocalDateTime startTime, int duration) {
+    public GroupSession(int sessionID, Group group, Game game, Set<User> members, LocalDateTime startTime, DateTime scheduledDate, int duration) {
+        this.sessionID = sessionID;
         this.group = group;
         this.game = game;
+        this.members = members;
         this.startTime = startTime;
+        this.scheduledDate = scheduledDate;
         this.duration = duration;
+        this.active = true;
     }
 
     public GroupSession(Group group) {
         this.group = group;
     }
 
-    // Getters and setters
-    public LocalDateTime getStartTime() {
-        return startTime;
-    }
-
-    public void setStartTime(LocalDateTime startTime) {
-        this.startTime = startTime;
-    }
-
+    // getters and setters
     public int getSessionID() {
         return sessionID;
     }
-
-    public void setSessionID(int sessionID) {
+    public GroupSession setSessionID(int sessionID) {
         this.sessionID = sessionID;
+        return this;
     }
-
     public Group getGroup() {
         return group;
     }
-
-    public void setGroup(Group group) {
+    public GroupSession setGroup(Group group) {
         // Remove from previous group's sessions list
         if (this.group != null) {
             this.group.getSessions().remove(this);
@@ -78,31 +88,58 @@ public class GroupSession
         if (group != null && !group.getSessions().contains(this)) {
             group.getSessions().add(this);
         }
-    }
 
+        return this;
+    }
     public Game getGame() {
         return game;
     }
-
-    public void setGame(Game game) {
+    public GroupSession setGame(Game game) {
         this.game = game;
+        return this;
     }
-
-    public LocalDateTime getScheduledDate() {
+    public Set<User> getMembers() {
+        return members;
+    }
+    public GroupSession setMembers(Set<User> members) {
+        this.members = members;
+        return this;
+    }
+    public User addMember(User member) {
+        members.add(member);
+        return member;
+    }
+    public User removeMember(User member) {
+        members.remove(member);
+        return member;
+    }
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+    public DateTime getScheduledDate() {
         return scheduledDate;
     }
-
-    public void setScheduledDate(LocalDateTime scheduledDate) {
+    public GroupSession setScheduledDate(DateTime scheduledDate) {
         this.scheduledDate = scheduledDate;
+        return this;
     }
-
     public int getDuration() {
         return duration;
     }
-
-    public void setDuration(int duration) {
+    public GroupSession setDuration(int duration) {
         this.duration = duration;
+        return this;
     }
+    public boolean isActive() {
+        return active;
+    }
+    public GroupSession setActive(boolean active) {
+        this.active = active;
+        return this;
+    } 
 
     // Utility methods
     public LocalDateTime getEndTime() {

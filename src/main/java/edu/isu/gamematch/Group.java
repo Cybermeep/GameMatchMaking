@@ -2,7 +2,10 @@ package edu.isu.gamematch;
 
 import javax.persistence.*;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "groups")
@@ -23,7 +26,7 @@ public class Group
         joinColumns = @JoinColumn(name = "group_id"),
         inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private List<User> members = new ArrayList<>();
+    private Set<User> members = new LinkedHashSet<>();
 
     @ManyToMany
     @JoinTable(
@@ -34,28 +37,30 @@ public class Group
     private List<Game> games = new ArrayList<>();
 
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<GroupSession> sessions = new ArrayList<>();
+    private Set<GroupSession> sessions = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GroupVote> votes = new ArrayList<>();
 
-    // Default constructor required by JPA
-    public Group() {
-    }
-
-    //constructor
-    public Group(User owner)
+    // default constructor required by JPA
+    public Group() 
     {
-        this.groupOwner = owner;
     }
 
-    //additional methods
-    /*
+    // constructor
+    public Group(int ID, User owner)
+    {
+        this.groupID = ID;
+        this.groupOwner = owner;
+        this.games = new ArrayList<Game>();
+        this.members = new LinkedHashSet<User>();
+        this.sessions = new LinkedHashSet<GroupSession>();
+    }
+
+    // other
     public void createGroup()
     {
     }
-    */
-
     public void deleteGroup()
     {
         this.groupID = 0;
@@ -63,116 +68,99 @@ public class Group
         this.games = null;
         this.members = null;
     }
-
-    public boolean transferGroupOwnership(User newOwner)
+    
+    // getters and setters
+    public int getGroupID() 
     {
-        this.groupOwner = newOwner;
-        return true;
-    }
-
-    public String generateGroupInviteLink()
-    {
-        return "";
-    }
-
-    public boolean removeGroupMember(User member)
-    {
-        if(members.contains(member))
-        {
-            members.remove(member);
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    public boolean addGroupMember(User member)
-    {
-        members.add(member);
-        return true;
-    }
-
-    // Getters and setters
-    public int getGroupID() {
         return groupID;
     }
-
-    public void setGroupID(int groupID) {
+    public Group setGroupID(int groupID) 
+    {
         this.groupID = groupID;
+        return this;
     }
-
-    public User getGroupOwner() {
+    public User getGroupOwner() 
+    {
         return groupOwner;
     }
-
-    public void setGroupOwner(User groupOwner) {
-        this.groupOwner = groupOwner;
+    public Group setGroupOwner(User newOwner)
+    {
+        this.groupOwner = newOwner;
+        return this;
     }
-
-    public List<User> getMembers() {
+    public Set<User> getMembers() 
+    {
         return members;
     }
-
-    public void setMembers(List<User> members) {
+    public Group setMembers(Set<User> members) 
+    {
         this.members = members;
+        return this;
     }
-
-    public List<Game> getGames() {
+    public User addGroupMember(User member)
+    {
+        members.add(member);
+        return member;
+    }
+    public User removeGroupMember(User member)
+    {
+        members.remove(member);
+        return member;
+    }
+    public List<Game> getGames() 
+    {
         return games;
     }
-
-    public void setGames(List<Game> games) {
+    public Group setGames(List<Game> games) 
+    {
         this.games = games;
+        return this;
     }
-
-    public List<GroupSession> getSessions() {
+    public Game addGame(Game game)
+    {
+        games.add(game);
+        return game;
+    }
+    public Game removeGame(Game game)
+    {
+        games.remove(game);
+        return game;
+    }
+    public Set<GroupSession> getSessions() 
+    {
         return sessions;
     }
-
-    public void setSessions(List<GroupSession> sessions) {
+    public Group setSessions(Set<GroupSession> sessions) 
+    {
         this.sessions = sessions;
+        return this;
     }
-
-    public void addSession(GroupSession session) {
+    public GroupSession addGroupSession(GroupSession session)
+    {
         sessions.add(session);
-        session.setGroup(this);
+        return session;
     }
-
-    public void removeSession(GroupSession session) {
+    public GroupSession removeGroupSession(GroupSession session)
+    {
         sessions.remove(session);
-        session.setGroup(null);
+        return session;
     }
-
-    public List<GroupVote> getVotes() {
+    public List<GroupVote> getVotes() 
+    {
         return votes;
     }
-
-    public void setVotes(List<GroupVote> votes) {
+    public void setVotes(List<GroupVote> votes) 
+    {
         this.votes = votes;
     }
-
-    public void addVote(GroupVote vote) {
+    public void addVote(GroupVote vote) 
+    {
         votes.add(vote);
         vote.setGroup(this);
     }
-
-    public void removeVote(GroupVote vote) {
+    public void removeVote(GroupVote vote) 
+    {
         votes.remove(vote);
         vote.setGroup(null);
     }
-
-    public void addGame(Game game) {
-        if (!games.contains(game)) {
-            games.add(game);
-        }
-    }
-
-    public void removeGame(Game game) {
-        games.remove(game);
-    }
-
-    //add games?
-    //remove games?
 }
