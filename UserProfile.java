@@ -5,7 +5,7 @@ import java.util.List;
 public class UserProfile
 {
     public String profileName;
-    private ArrayList<String> favoriteGenres;
+    private List<String> favoriteGenres;
     private User user;
 
     public UserProfile(String profileName, User user) 
@@ -19,11 +19,19 @@ public class UserProfile
         return profileName;
     }
 
-    public ArrayList<String> getFavoriteGenres() {
+    public List<String> getFavoriteGenres() {
         return favoriteGenres;
     }
 
     public User getUser() {
         return user;
+    }
+
+    public void setProfileName(String newName) {
+        this.profileName = newName;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }

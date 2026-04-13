@@ -27,7 +27,7 @@ public class UserProfile {
     // Default constructor for JPA
     public UserProfile() {
     }
-
+    
     public UserProfile(String profileName, User user) 
     {
         this.profileName = profileName;
@@ -39,11 +39,19 @@ public class UserProfile {
         return profileName;
     }
 
-    public ArrayList<String> getFavoriteGenres() {
+    public List<String> getFavoriteGenres() {
         return favoriteGenres;
     }
 
     public User getUser() {
         return user;
+    }
+
+    public void setProfileName(String newName) {
+        this.profileName = newName;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }
