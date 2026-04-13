@@ -1,120 +1,59 @@
+package edu.isu.gamematch;
 import java.util.Map;
 
-public class DataHandler {
+
+public abstract class DataHandler {
     // Fields
     private String serverName;
     private String username;
     private String password;
-    private DataHandler dh;
-
+    protected static DataHandler handler;
     // Constructor
     public DataHandler(String serverName, String username, String password) {
         this.serverName = serverName;
         this.username = username;
         this.password = password;
-        this.dh = this; // Self-reference as specified
     }
 
     // Connection methods
-    public boolean beginConnection() {
-        // Implementation to begin database connection
-        System.out.println("Beginning connection to server: " + serverName);
-        return true;
-    }
+    public abstract boolean beginConnection();
 
-    public boolean endConnection() {
-        // Implementation to end database connection
-        System.out.println("Ending connection to server: " + serverName);
-        return true;
-    }
-
+    public abstract boolean endConnection();
     // Data operations
-    public boolean read() {
-        // Implementation to read data
-        System.out.println("Reading data from server: " + serverName);
-        return true;
-    }
+    public abstract boolean read();
 
-    public boolean passData(Map<String, Object> data) {
-        // Implementation to pass data as Map (can represent JSON)
-        System.out.println("Passing data to server: " + serverName);
-        return true;
-    }
+    public abstract boolean passData(Map<String, Object> data);
 
-    public boolean remove() {
-        // Implementation to remove data
-        System.out.println("Removing data from server: " + serverName);
-        return true;
-    }
+    public abstract boolean remove();
 
-    public boolean write() {
-        // Implementation to write data
-        System.out.println("Writing data to server: " + serverName);
-        return true;
-    }
+    public abstract boolean write();
 
     // User management methods
-    public boolean createUser() {
-        // Implementation to create a user
-        System.out.println("Creating user on server: " + serverName);
-        return true;
-    }
+    public abstract boolean createUser();
+    
+    public abstract boolean updateUsers();
 
-    public boolean updateUsers() {
-        // Implementation to update users
-        System.out.println("Updating users on server: " + serverName);
-        return true;
-    }
+    public abstract User removeUsers();
 
-    public User removeUsers() {
-        // Implementation to remove users and return User object
-        System.out.println("Removing users from server: " + serverName);
-        return null; // Return null as placeholder
-    }
+    public abstract User searchUser(String profileName);
 
-    public User searchUser(String profileName) {
-        // Implementation to search for a user by profile name
-        System.out.println("Searching for user: " + profileName + " on server: " + serverName);
-        return null; // Return null as placeholder
-    }
-
-    public String generateActivitySummary() {
-        // Implementation to generate activity summary
-        System.out.println("Generating activity summary for server: " + serverName);
-        return "Activity summary for " + serverName;
-    }
+    public abstract String generateActivitySummary();
 
     // Getters and setters
-    public String getServerName() {
-        return serverName;
-    }
+    public abstract String getServerName();
 
-    public void setServerName(String serverName) {
-        this.serverName = serverName;
-    }
+    public abstract void setServerName(String serverName);
 
-    public String getUsername() {
-        return username;
-    }
+    public abstract String getUsername();
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
+    public abstract void setUsername(String username);
+    
+    public abstract String getPassword();
 
-    public String getPassword() {
-        return password;
-    }
+    public abstract void setPassword(String password);
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
+    public abstract DataHandler getDh();
 
-    public DataHandler getDh() {
-        return dh;
-    }
-
-    public void setDh(DataHandler dh) {
-        this.dh = dh;
-    }
+    public abstract void setDh(DataHandler dh);
 }
 

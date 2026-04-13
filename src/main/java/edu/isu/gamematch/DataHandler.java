@@ -1,19 +1,18 @@
 package edu.isu.gamematch;
 import java.util.Map;
 
-public class DataHandler {
+public abstract class DataHandler {
     // Fields
     private String serverName;
     private String username;
     private String password;
-    private DataHandler dh;
+    protected static DataHandler handler;
 
     // Constructor
-    public DataHandler(String serverName, String username, String password) {
+    public DataHandler(String serverName, String username, String password, int port) {
         this.serverName = serverName;
         this.username = username;
         this.password = password;
-        this.dh = this; // Self-reference as specified
     }
 
     // Connection methods
@@ -111,11 +110,11 @@ public class DataHandler {
     }
 
     public DataHandler getDh() {
-        return dh;
+        return handler;
     }
 
     public void setDh(DataHandler dh) {
-        this.dh = dh;
+        this.handler = dh;
     }
 }
 
