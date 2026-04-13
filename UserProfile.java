@@ -1,50 +1,37 @@
-public String profileName;
-private ArrayList<String> favoriteGenres;
-private User user;
+package edu.isu.gamematch;
+import java.util.ArrayList;
+import java.util.List;
 
-public UserProfile(String profileName, User user) 
+public class UserProfile
 {
-    this.profileName = profileName;
-    this.user = user;
-    this.favoriteGenres = new ArrayList<>();
-}
+    public String profileName;
+    private List<String> favoriteGenres;
+    private User user;
 
-public List<User> retrieveMutualFriends(User otherUser) {
-    List<User> mutual = new ArrayList<>();
-    for (User friend : this.user.getFriends()) {
-        if (otherUser.getFriends().contains(friend)) {
-            mutual.add(friend);
-        }
-    }
-    return mutual;
-}
-
-public boolean addGenrePreference(String genre)
-{
-    if (genre == null || favoriteGenres.contains(genre)) 
+    public UserProfile(String profileName, User user) 
     {
-        return false;
+        this.profileName = profileName;
+        this.user = user;
+        this.favoriteGenres = new ArrayList<>();
     }
-    favoriteGenres.add(genre);
-    return true;
-}
 
-public boolean removeGenrePreference(String genre)
-{
-    return favoriteGenres.remove(genre);
-}
+    public String getProfileName() {
+        return profileName;
+    }
 
-public void setProfileName( String newName)
-{
-    this.profileName = newName;
-}
+    public List<String> getFavoriteGenres() {
+        return favoriteGenres;
+    }
 
-public String getProfileName()
-{
-    return this.profileName;
-}
+    public User getUser() {
+        return user;
+    }
 
-public User getUser()
-{
-    return this.user;
+    public void setProfileName(String newName) {
+        this.profileName = newName;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
 }

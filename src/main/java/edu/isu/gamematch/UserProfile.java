@@ -16,9 +16,9 @@ public class UserProfile {
     private String profileName;
 
     @ElementCollection
-    @CollectionTable(name = "user_favorite_games", joinColumns = @JoinColumn(name = "profile_id"))
-    @Column(name = "game_name")
-    private List<String> favoriteGames = new ArrayList<>();
+    @CollectionTable(name = "user_favorite_genres", joinColumns = @JoinColumn(name = "profile_id"))
+    @Column(name = "genre_name")
+    private List<String> favoriteGenres = new ArrayList<>();
 
     @OneToOne
     @JoinColumn(name = "user_id")
@@ -27,70 +27,31 @@ public class UserProfile {
     // Default constructor for JPA
     public UserProfile() {
     }
-
-    public UserProfile(String profileName, User user)
+    
+    public UserProfile(String profileName, User user) 
     {
         this.profileName = profileName;
         this.user = user;
-    }
-
-    // Getters and setters
-    public int getProfileId() {
-        return profileId;
-    }
-
-    public void setProfileId(int profileId) {
-        this.profileId = profileId;
+        this.favoriteGenres = new ArrayList<>();
     }
 
     public String getProfileName() {
         return profileName;
     }
 
+    public List<String> getFavoriteGenres() {
+        return favoriteGenres;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
     public void setProfileName(String newName) {
         this.profileName = newName;
     }
 
-    public List<String> getFavoriteGames() {
-        return favoriteGames;
-    }
-
-    public void setFavoriteGames(List<String> favoriteGames) {
-        this.favoriteGames = favoriteGames;
-    }
-
-    public boolean addFavoriteGame(String game)
-    {
-        if (game == null || favoriteGames.contains(game))
-        {
-            return false;
-        }
-        favoriteGames.add(game);
-        return true;
-    }
-
-    public boolean removeFavoriteGame(String game)
-    {
-        return favoriteGames.remove(game);
-    }
-
-    public User getUser()
-    {
-        return this.user;
-    }
-
     public void setUser(User user) {
         this.user = user;
-    }
-
-    // Additional methods
-    public List<User> retrieveMutualFriends(User otherUser) {
-        List<User> mutual = new ArrayList<>();
-        for (User friend : this.user.getFriends()) {
-            if (otherUser.getFriends().contains(friend)) {
-                mutual.add(friend);
-            }
-        }
-        return mutual;
     }
 }
