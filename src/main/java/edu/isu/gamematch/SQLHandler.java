@@ -1,6 +1,7 @@
 package edu.isu.gamematch;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Handler;
 
 import org.hibernate.Session;
 import org.hibernate.Transaction;
@@ -8,13 +9,19 @@ import org.hibernate.query.Query;
 
 public class SQLHandler extends DataHandler {
     // Constructor matching DataHandler
-    public SQLHandler(String serverName, String username, String password) {
-        super(serverName, username, password);
+    private SQLHandler(String serverName, String username, String password, int port) {
+        
+        super(serverName, username, password, port);
     }
 
     // Alternative constructor with port
-    public SQLHandler(String serverName, int port, String username, String password) {
+    private SQLHandler(String serverName, int port, String username, String password) {
         super(serverName, username, password);
+    }
+
+    public static DataHandler createInstance(String serverName, String username, String password) {
+        handler = new SQLHandler(serverName, username, password);
+        return handler;
     }
 
     // Stub implementations that just call parent class or return dummy values
@@ -187,6 +194,7 @@ public class SQLHandler extends DataHandler {
 
     @Override
     public String generateActivitySummary() {
+        //To-Do
         System.out.println("SQLHandler: Generating activity summary for " + getServerName());
         return "Activity summary for " + getServerName();
     }
