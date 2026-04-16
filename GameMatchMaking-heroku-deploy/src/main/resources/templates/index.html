@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Match Making - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 450px;
+            width: 100%;
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .logo p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            cursor: pointer;
+            color: #666;
+            font-weight: 500;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-steam {
+            background: #171a21;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+        
+        .btn-steam:hover {
+            background: #2a3f5a;
+            transform: translateY(-2px);
+        }
+        
+        .divider {
+            text-align: center;
+            margin: 25px 0;
+            position: relative;
+        }
+        
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e0e0e0;
+        }
+        
+        .divider span {
+            background: white;
+            padding: 0 15px;
+            color: #999;
+            position: relative;
+            font-size: 0.9rem;
+        }
+        
+        .alert {
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .steam-icon {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .forgot-link {
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        .forgot-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        
+        .forgot-link a:hover {
+            text-decoration: underline;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            color: rgba(255,255,255,0.8);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-card">
+            <div class="logo">
+                <h1>🎮 GameMatch</h1>
+                <p>Find your next game with friends</p>
+            </div>
+            
+            <!-- Alert Messages -->
+            <div th:if="${error}" class="alert alert-error show" th:text="${error}"></div>
+            <div th:if="${success}" class="alert alert-success show" th:text="${success}"></div>
+            <div id="messageAlert" class="alert"></div>
+            
+            <!-- Tabs -->
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('login')">Login</div>
+                <div class="tab" onclick="switchTab('register')">Register</div>
+            </div>
+            
+            <!-- Login Form -->
+            <div id="loginTab" class="tab-content active">
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label for="loginUsername">Username or Email</label>
+                        <input type="text" id="loginUsername" name="username" required 
+                               placeholder="Enter your username">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" name="password" required 
+                               placeholder="Enter your password">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Sign In</button>
+                    <div class="forgot-link">
+                        <a href="#" onclick="showMessage('Password reset feature coming soon!')">Forgot password?</a>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Register Form -->
+            <div id="registerTab" class="tab-content">
+                <form id="registerForm" onsubmit="handleRegister(event)">
+                    <div class="form-group">
+                        <label for="regUsername">Username *</label>
+                        <input type="text" id="regUsername" name="username" required 
+                               placeholder="Choose a username">
+                    </div>
+                    <div class="form-group">
+                        <label for="regEmail">Email *</label>
+                        <input type="email" id="regEmail" name="email" required 
+                               placeholder="your@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="regPassword">Password *</label>
+                        <input type="password" id="regPassword" name="password" required 
+                               placeholder="Create a password" minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="regConfirmPassword">Confirm Password *</label>
+                        <input type="password" id="regConfirmPassword" name="confirmPassword" required 
+                               placeholder="Confirm your password">
+                    </div>
+                    <div class="form-group">
+                        <label for="regSteamId">Steam ID (Optional)</label>
+                        <input type="text" id="regSteamId" name="steamId" 
+                               placeholder="Your 17-digit Steam ID">
+                        <small style="color: #999; font-size: 0.8rem;">
+                            <a href="#" onclick="showMessage('Find your Steam ID in your profile URL or use steamid.io')" 
+                               style="color: #667eea;">How to find Steam ID?</a>
+                        </small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Account</button>
+                </form>
+            </div>
+            
+            <!-- Divider -->
+            <div class="divider">
+                <span>OR</span>
+            </div>
+            
+            <!-- Steam Login -->
+            <a href="/auth/steam" class="btn btn-steam">
+                <svg class="steam-icon" viewBox="0 0 32 32" fill="currentColor">
+                    <path d="M16,0C7.16,0,0,7.16,0,16c0,5.8,3.08,10.86,7.64,13.64l2.04-5.8c-0.6-0.44-1.04-1.04-1.24-1.76l-2.88-2.88 c-0.36,0.12-0.76,0.2-1.16,0.2c-2.08,0-3.76-1.68-3.76-3.76c0-2.08,1.68-3.76,3.76-3.76c2.08,0,3.76,1.68,3.76,3.76 c0,0.4-0.08,0.8-0.2,1.16l2.88,2.88c0.72,0.2,1.32,0.64,1.76,1.24l5.8-2.04C26.86,19.08,32,14.88,32,8 C32,3.58,28.42,0,24,0H16z"/>
+                </svg>
+                Continue with Steam
+            </a>
+        </div>
+        <footer>
+            <p>Game Match Making is not affiliated with Valve Corporation or Steam.</p>
+            <p>Steam and the Steam logo are trademarks of Valve Corporation.</p>
+        </footer>
+    </div>
+    
+    <script>
+        function switchTab(tab) {
+            // Update tabs
+            document.querySelectorAll('.tab').forEach((t, i) => {
+                if ((tab === 'login' && i === 0) || (tab === 'register' && i === 1)) {
+                    t.classList.add('active');
+                } else {
+                    t.classList.remove('active');
+                }
+            });
+            
+            // Update content
+            document.getElementById('loginTab').classList.toggle('active', tab === 'login');
+            document.getElementById('registerTab').classList.toggle('active', tab === 'register');
+        }
+        
+        function showMessage(message, isError = false) {
+            const alert = document.getElementById('messageAlert');
+            alert.textContent = message;
+            alert.className = 'alert ' + (isError ? 'alert-error' : 'alert-success') + ' show';
+            setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+        
+        async function handleLogin(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        username: formData.get('username'),
+                        password: formData.get('password')
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('Login successful! Redirecting...');
+                    setTimeout(() => window.location.href = '/dashboard', 1000);
+                } else {
+                    showMessage(result.message || 'Login failed', true);
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', true);
+            }
+        }
+        
+        async function handleRegister(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            // Validate passwords match
+            if (formData.get('password') !== formData.get('confirmPassword')) {
+                showMessage('Passwords do not match!', true);
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        username: formData.get('username'),
+                        email: formData.get('email'),
+                        password: formData.get('password'),
+                        steamId: formData.get('steamId') || null
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('Account created! You can now login.');
+                    switchTab('login');
+                    event.target.reset();
+                } else {
+                    showMessage(result.message || 'Registration failed', true);
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', true);
+            }
+        }
+        
+        // Check URL parameters for messages
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('registered') === 'true') {
+            showMessage('Registration successful! Please login.');
+        }
+        if (urlParams.get('logout') === 'true') {
+            showMessage('You have been logged out.');
+        }
+    </script>
+</body>
+</html>
