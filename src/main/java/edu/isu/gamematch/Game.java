@@ -137,61 +137,6 @@ public class Game{
         gameAchievement.setGame(null);
     }
 
-    //methods
-
-    /*adds tag to game (assuming it's user generated tags I forgot what Tag was supposed to be for)
-    @param tag The tag to add
-    */
-    public void addTag(Tag tag){
-        if(tag == null){
-            return;
-        }
-        for(int i = 0; i < tags.size(); i++){
-            if(tags.get(i).equals(tag)){
-                return; //already in
-            }
-        }
-        tags.add(tag);
-    }
-
-    /*
-    removes tag from game
-    @param tag The tag to remove
-    @return boolean
-    */
-    public boolean removeTag(Tag tag){
-        return tags.remove(tag);
-    }
-
-    /*
-    checks if game has tag matching given tagname
-    @param tagName 
-    @return boolean
-    */
-    public boolean hasTag(String tagName){
-        for(int i = 0; i < tags.size(); i++){
-            if(tags.get(i).getTagName().equalsIgnoreCase(tagName)){
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /*
-    Returns playtime in hours 
-    @return int
-    */
-    public int getPlaytimeHours(){
-        return playtimeForever / 60;
-    }
-
-    //make game from steamGame (factory)
-    public static Game fromSteamGame(Object steamGame) {
-        return null;
-    }
-
-
-
     @Override
     public String toString(){
         return "Game{" + "gameID=" + gameID + ", gameName'" + gameName + '\'' + ", genre='" + genre + '\'' + ", playtimeForever=" + playtimeForever + " min" + "}";
