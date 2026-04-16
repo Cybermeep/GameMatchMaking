@@ -192,7 +192,7 @@ public class GroupOperations{
      * @param duration scheduled duration of session in minutes
      * @return newly created GroupSession object
      */
-    public GroupSession scheduleSession(Group group, Game game, Set<User> members, DateTime scheduledDate, int duration)
+    public GroupSession scheduleSession(Group group, Game game, Set<User> members, LocalDateTime scheduledDate, int duration)
     {
         int sessionID = group.getSessions().size() + 1;
         
