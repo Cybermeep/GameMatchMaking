@@ -1,13 +1,31 @@
 // implement in user class
 
+import javax.persistence.Column;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
+import javax.persistence.ManyToOne;
+
 @Entity
 @Table(name = "user_games")
 /**
  * Association class to hold a user's data for a particular game.
  */
 public class UserGame {
-    // how to define composite key with hibernate?
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "usergame_id")
+    private int userGameID;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "user_id")
     private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "game_id", referencedColumnName = "game_id")
     private Game game;
 
     @Column(name = "total_hours")
@@ -37,6 +55,7 @@ public class UserGame {
 
     // constructor
     public UserGame(User user, Game game, int totalHours, int recentHours, int daysSincePlayed, Set<Tag> tags) {
+        this.userGameID = Integer.parseInt("" + user.getUserID() + game.getGameID());
         this.user = user;
         this.game = game;
         this.totalHours = totalHours;
