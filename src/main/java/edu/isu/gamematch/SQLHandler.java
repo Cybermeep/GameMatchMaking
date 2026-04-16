@@ -8,19 +8,13 @@ import org.hibernate.Transaction;
 import org.hibernate.query.Query;
 
 public class SQLHandler extends DataHandler {
-    // Constructor matching DataHandler
+    // Constructor
     private SQLHandler(String serverName, String username, String password, int port) {
-        
         super(serverName, username, password, port);
     }
 
-    // Alternative constructor with port
-    private SQLHandler(String serverName, int port, String username, String password) {
-        super(serverName, username, password);
-    }
-
     public static DataHandler createInstance(String serverName, String username, String password) {
-        handler = new SQLHandler(serverName, username, password);
+        handler = new SQLHandler(serverName, username, password, 3306);
         return handler;
     }
 
@@ -897,20 +891,20 @@ public class SQLHandler extends DataHandler {
         } finally {
             hibernateSession.close();
         }
-
-            public User searchUserBySteamId(String steamId) {
-            Session session = HibernateUtil.getSessionFactory().openSession();
-            try {
-                Query<User> query = session.createQuery(
-                    "FROM User u WHERE u.steamID = :steamId", User.class);
-                            query.setParameter("steamId", Long.parseLong(steamId));
-                    return query.uniqueResult();
-                } catch (Exception e) {
-        System.err.println("SQLHandler: Error searching for user by Steam ID - " + e.getMessage());
-        return null;
-    } finally {
-        session.close();
     }
-}
+
+    public User searchUserBySteamId(String steamId) {
+        Session session = HibernateUtil.getSessionFactory().openSession();
+        try {
+            Query<User> query = session.createQuery(
+                "FROM User u WHERE u.steamID = :steamId", User.class);
+            query.setParameter("steamId", Long.parseLong(steamId));
+            return query.uniqueResult();
+        } catch (Exception e) {
+            System.err.println("SQLHandler: Error searching for user by Steam ID - " + e.getMessage());
+            return null;
+        } finally {
+            session.close();
+        }
     }
 }

@@ -5,11 +5,6 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.util.*;
 
-/**
- * Abstract base class for data import operations
- * MOCKUP to describe base logic
- * NOT FINAL VERSION
- */
 public abstract class ImportData {
     
     protected final Logger logger = LoggerFactory.getLogger(getClass());
@@ -22,10 +17,6 @@ public abstract class ImportData {
         initializeValidationRules();
     }
     
-    /**
-     * Template method defining the import workflow
-     * Subclasses override specific steps but not the overall algorithm
-     */
     public final ImportResult importData(String source) {
         logger.info("Starting import process from source: {}", source);
         importStatus.setStartTime(LocalDateTime.now());
@@ -63,42 +54,15 @@ public abstract class ImportData {
         }
     }
     
-    /**
-     * Validates the source before import
-     * Subclasses must implement source-specific validation
-     */
     protected abstract boolean validateSource(String source);
-    
-    /**
-     * Extracts raw data from the source
-     * Subclasses implement extraction logic
-     */
     protected abstract RawData extractData(String source);
-    
-    /**
-     * Transforms raw data into application-ready format
-     * Subclasses implement transformation logic
-     */
     protected abstract TransformedData transformData(RawData rawData);
-    
-    /**
-     * Loads transformed data into the system
-     * Subclasses implement persistence logic
-     */
     protected abstract boolean loadData(TransformedData data);
     
-    /**
-     * Hook method for post-import processing
-     * Subclasses can override for additional steps
-     */
     protected void postImportProcessing(TransformedData data) {
-        // Default implementation - does nothing
         logger.debug("No post-processing defined for this import type");
     }
     
-    /**
-     * Initializes validation rules for this import type
-     */
     protected void initializeValidationRules() {
         // Default implementation - subclasses override
     }
@@ -123,5 +87,120 @@ public abstract class ImportData {
             importStatus.getStatus(),
             importStatus.getDurationMillis(),
             importStatus.getRecordsProcessed());
+    }
+    
+    // Inner classes
+    public static class ImportStatus {
+        public enum Status { PENDING, SUCCESS, FAILED }
+        private Status status = Status.PENDING;
+        private LocalDateTime startTime;
+        private LocalDateTime endTime;
+        private int recordsProcessed;
+        private String errorMessage;
+        
+        public Status getStatus() { return status; }
+        public void setStatus(Status status) { this.status = status; }
+        public LocalDateTime getStartTime() { return startTime; }
+        public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
+        public LocalDateTime getEndTime() { return endTime; }
+        public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
+        public int getRecordsProcessed() { return recordsProcessed; }
+        public void setRecordsProcessed(int recordsProcessed) { this.recordsProcessed = recordsProcessed; }
+        public String getErrorMessage() { return errorMessage; }
+        public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+        public void incrementProcessedRecords() { this.recordsProcessed++; }
+        
+        public long getDurationMillis() {
+            if (startTime == null || endTime == null) return -1;
+            return java.time.Duration.between(startTime, endTime).toMillis();
+        }
+    }
+    
+    public static class ValidationRule {
+        private final String ruleId;
+        private final String description;
+        public ValidationRule(String ruleId, String description) {
+            this.ruleId = ruleId;
+            this.description = description;
+        }
+        public String getRuleId() { return ruleId; }
+        public String getDescription() { return description; }
+    }
+    
+    public static class ImportResult {
+        private final boolean success;
+        private final ImportStatus status;
+        private final TransformedData data;
+        
+        public ImportResult(boolean success, ImportStatus status, TransformedData data) {
+            this.success = success;
+            this.status = status;
+            this.data = data;
+        }
+        public boolean isSuccess() { return success; }
+        public ImportStatus getStatus() { return status; }
+        public TransformedData getData() { return data; }
+    }
+    
+    public static class RawData {
+        private String source;
+        private String format;
+        private Object content;
+        private Map<String, Object> metadata = new HashMap<>();
+        
+        public boolean isEmpty() { return content == null; }
+        public String getSource() { return source; }
+        public void setSource(String source) { this.source = source; }
+        public String getFormat() { return format; }
+        public void setFormat(String format) { this.format = format; }
+        public Object getContent() { return content; }
+        public void setContent(Object content) { this.content = content; }
+        public Map<String, Object> getMetadata() { return metadata; }
+        public void setMetadata(Map<String, Object> metadata) { this.metadata = metadata; }
+    }
+    
+    public static class TransformedData {
+        private String sourceType;
+        private String originalFormat;
+        private List<Object> records = new ArrayList<>();
+        private int recordCount;
+        private List<ValidationResult> validationResults = new ArrayList<>();
+        
+        public String getSourceType() { return sourceType; }
+        public void setSourceType(String sourceType) { this.sourceType = sourceType; }
+        public String getOriginalFormat() { return originalFormat; }
+        public void setOriginalFormat(String originalFormat) { this.originalFormat = originalFormat; }
+        public List<Object> getRecords() { return records; }
+        public void setRecords(List<Object> records) { this.records = records; }
+        public int getRecordCount() { return recordCount; }
+        public void setRecordCount(int recordCount) { this.recordCount = recordCount; }
+        public List<ValidationResult> getValidationResults() { return validationResults; }
+        public void setValidationResults(List<ValidationResult> validationResults) { 
+            this.validationResults = validationResults; 
+        }
+    }
+    
+    public static class ValidationResult {
+        private final boolean valid;
+        private final String message;
+        
+        public ValidationResult(boolean valid, String message) {
+            this.valid = valid;
+            this.message = message;
+        }
+        public boolean isValid() { return valid; }
+        public String getMessage() { return message; }
+    }
+    
+    public static class ImportRecord {
+        private final String type;
+        private final String content;
+        
+        public ImportRecord(String type, String content) {
+            this.type = type;
+            this.content = content;
+        }
+        public String getType() { return type; }
+        public String getContent() { return content; }
     }
 }

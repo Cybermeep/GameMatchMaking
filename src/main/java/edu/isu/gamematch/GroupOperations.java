@@ -1,6 +1,13 @@
 /*
     GroupOperations class
 */
+package edu.isu.gamematch;
+
+import edu.isu.gamematch.Game;
+import edu.isu.gamematch.Group;
+import edu.isu.gamematch.GroupSession;
+import edu.isu.gamematch.GroupVote;
+import edu.isu.gamematch.User;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;

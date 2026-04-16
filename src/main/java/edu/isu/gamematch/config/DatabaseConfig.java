@@ -1,11 +1,13 @@
 package edu.isu.gamematch.config;
 
+import edu.isu.gamematch.SQLHandler;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
 import org.springframework.stereotype.Component;
+
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;

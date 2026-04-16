@@ -1,4 +1,12 @@
 // implement in user class
+package edu.isu.gamematch;
+
+import edu.isu.gamematch.User;
+import edu.isu.gamematch.Game;
+import edu.isu.gamematch.Tag;
+
+import javax.persistence.*;
+import java.util.Set;
 
 @Entity
 @Table(name = "user_games")
