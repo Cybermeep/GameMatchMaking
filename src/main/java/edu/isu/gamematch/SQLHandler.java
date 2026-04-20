@@ -1,7 +1,6 @@
 package edu.isu.gamematch;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Handler;
 
 import org.hibernate.Session;
 import org.hibernate.Transaction;
@@ -16,11 +15,11 @@ public class SQLHandler extends DataHandler {
 
     // Alternative constructor with port
     private SQLHandler(String serverName, int port, String username, String password) {
-        super(serverName, username, password);
+        super(serverName, username, password, port);
     }
 
-    public static DataHandler createInstance(String serverName, String username, String password) {
-        handler = new SQLHandler(serverName, username, password);
+    public static DataHandler createInstance(String serverName, String username, String password, int port) {
+        handler = new SQLHandler(serverName, username, password, port);
         return handler;
     }
 
