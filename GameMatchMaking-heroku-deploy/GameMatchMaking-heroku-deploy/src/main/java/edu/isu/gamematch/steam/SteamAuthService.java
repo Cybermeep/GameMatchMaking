@@ -54,6 +54,9 @@ public class SteamAuthService {
             Map<String, String> params = new LinkedHashMap<>();
             params.put("openid.ns", "http://specs.openid.net/auth/2.0");
             params.put("openid.mode", "checkid_setup");
+            String realm = returnUrl.substring(0, returnUrl.indexOf("/auth/steam/callback"));
+            params.put("openid.realm", realm);
+            //params.put("openid.realm", realm);  
             params.put("openid.return_to", returnUrl);
             params.put("openid.realm", returnUrl);
             params.put("openid.identity", "http://specs.openid.net/auth/2.0/identifier_select");
@@ -96,7 +99,7 @@ public class SteamAuthService {
             }
             
             // Extract Steam ID from the claimed_id
-            String[] claimedIds = requestParams.get("openid_claimed_id");
+            String[] claimedIds = requestParams.get("openid.claimed_id");
             if (claimedIds != null && claimedIds.length > 0) {
                 String claimedId = claimedIds[0];
                 String[] parts = claimedId.split("/");
@@ -119,13 +122,13 @@ public class SteamAuthService {
      */
     private boolean validateOpenIdResponse(Map<String, String[]> params) {
         // Check required OpenID parameters
-        String[] modes = params.get("openid_mode");
+        String[] modes = params.get("openid.mode");
         if (modes == null || modes.length == 0 || !"id_res".equals(modes[0])) {
             logger.warn("Invalid openid_mode: {}", modes != null ? modes[0] : "null");
             return false;
         }
         
-        String[] claimedIds = params.get("openid_claimed_id");
+        String[] claimedIds = params.get("openid.claimed_id");
         if (claimedIds == null || claimedIds.length == 0) {
             logger.warn("Missing openid_claimed_id");
             return false;

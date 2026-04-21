@@ -186,13 +186,6 @@ public class SQLHandler extends DataHandler {
         }
     }
 
-    @Override
-    public String generateActivitySummary() {
-        //To-Do
-        System.out.println("SQLHandler: Generating activity summary for " + getServerName());
-        return "Activity summary for " + getServerName();
-    }
-
     // ==================== GAME OPERATIONS ====================
     public boolean createGame(Game game) {
         Session session = HibernateUtil.getSessionFactory().openSession();
@@ -213,16 +206,28 @@ public class SQLHandler extends DataHandler {
     }
 
     public Game getGameByAppId(String appId) {
+        Session session = HibernateUtil.getSessionFactory().openSession();
+        try {
+            String url = "https://store.steampowered.com/app/" + appId;
+            org.hibernate.query.Query<Game> query = session.createQuery(
+                "FROM Game g WHERE g.steamAppURL = :url", Game.class);
+            query.setParameter("url", url);
+            java.util.List<Game> results = query.list();
+            return results.isEmpty() ? null : results.get(0);
+        } catch (Exception e) {
+            System.err.println("SQLHandler: Error finding game by appId - " + e.getMessage());
+            return null;
+        } finally {
+            session.close();
+        }
+    }
+
+    public Game getGameById(int gameId) {
     Session session = HibernateUtil.getSessionFactory().openSession();
     try {
-        String url = "https://store.steampowered.com/app/" + appId;
-        org.hibernate.query.Query<Game> query = session.createQuery(
-            "FROM Game g WHERE g.steamAppURL = :url", Game.class);
-        query.setParameter("url", url);
-        java.util.List<Game> results = query.list();
-        return results.isEmpty() ? null : results.get(0);
+        return session.get(Game.class, gameId);
     } catch (Exception e) {
-        System.err.println("SQLHandler: Error finding game by appId - " + e.getMessage());
+        System.err.println("SQLHandler: Error retrieving game by ID - " + e.getMessage());
         return null;
     } finally {
         session.close();
@@ -912,7 +917,7 @@ public class SQLHandler extends DataHandler {
             session.close();
         }
     }
-}
+
     // ==================== JOIN REQUEST OPERATIONS (FR 3.1.17-3.1.19) ====================
 
     public boolean createJoinRequest(JoinRequest request) {
@@ -1027,15 +1032,13 @@ public class SQLHandler extends DataHandler {
         }
     }
 
-
-
     // ==================== ACTIVITY SUMMARY (FR 3.1.26-3.1.27) ====================
 
     @Override
     public String generateActivitySummary() {
         // Delegates to UserProfileOperations.generateWeeklyActivitySummary() with real data.
         // Here we return a structured placeholder that signals the method is hooked up.
-        return "Activity summary — call UserProfileOperations.generateWeeklyActivitySummary() for full output.";
+        return "Activity summary - call UserProfileOperations.generateWeeklyActivitySummary() for full output.";
     }
 
     // ==================== USER SEARCH BY STEAM NAME (FR 3.1.21) ====================
@@ -1073,8 +1076,9 @@ public class SQLHandler extends DataHandler {
         } finally {
             session.close();
         }
+    }
 
-        // ==================== GAME PERSISTENCE (FR 3.1.2, 3.1.13, 3.1.14) ====================
+    // ==================== GAME PERSISTENCE (FR 3.1.2, 3.1.13, 3.1.14) ====================
 
     /**
      * Look up a game by its Steam app URL (used to avoid duplicates when importing).
@@ -1116,5 +1120,4 @@ public class SQLHandler extends DataHandler {
             session.close();
         }
     }
-
-    }
+}

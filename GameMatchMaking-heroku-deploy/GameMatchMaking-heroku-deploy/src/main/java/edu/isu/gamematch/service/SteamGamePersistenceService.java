@@ -30,7 +30,7 @@ public class SteamGamePersistenceService {
         for (SteamGame sg : steamGames) {
             try {
                 // Check if this game is already in our database
-                Game existing = db.getGameByAppId(sg.getAppId());
+                Game existing = db.getGameByAppId(String.valueOf(sg.getAppId()));
                 if (existing == null) {
                     // Create a new Game record
                     Game game = new Game();
@@ -44,8 +44,8 @@ public class SteamGamePersistenceService {
                     db.saveGame(game);
                 }
             } catch (Exception e) {
-                // Log but don't crash — if one game fails, continue with the rest
-                System.err.println("Failed to persist game: " + sg.getName() + " — " + e.getMessage());
+                // Log but don't crash - if one game fails, continue with the rest
+                System.err.println("Failed to persist game: " + sg.getName() + " - " + e.getMessage());
             }
         }
     }
