@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Game Match Making</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .navbar {
+            background: #16213e;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #66c0f4;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .user-name {
+            font-weight: 500;
+        }
+
+        .logout-btn {
+            background: #ff4444;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+            .logout-btn:hover {
+                background: #cc3333;
+            }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .profile-section {
+            background: linear-gradient(135deg, #16213e, #0f3460);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 3px solid #66c0f4;
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px 25px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #66c0f4;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        .resync-btn {
+            background: #4caf50;
+            color: white;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
+
+            .resync-btn:hover {
+                background: #45a049;
+            }
+
+        .section {
+            background: #16213e;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+            .section h2 {
+                margin-bottom: 20px;
+                color: #66c0f4;
+            }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .game-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            transition: transform 0.3s;
+        }
+
+            .game-card:hover {
+                transform: translateY(-5px);
+                background: rgba(255,255,255,0.1);
+            }
+
+        .game-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .game-playtime {
+            color: #66c0f4;
+            font-size: 0.9rem;
+        }
+
+        .alert-success {
+            background: rgba(76,175,80,0.2);
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            color: #8bc34a;
+        }
+
+        .alert-error {
+            background: rgba(255,68,68,0.2);
+            border: 1px solid #ff4444;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            color: #ff8888;
+        }
+
+        .input-dark {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #2a2a3e;
+            color: #fff;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #888;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 768px) {
+            .profile-section {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== NAVBAR ==================== -->
+    <nav class="navbar">
+        <div class="logo">Game Match Making</div>
+        <div class="user-info">
+            <img th:src="${user.avatarUrl}" alt="Avatar" class="user-avatar">
+            <span class="user-name" th:text="${user.personaName}"></span>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <!-- Flash messages -->
+        <div th:if="${success}" class="alert-success" th:text="${success}"></div>
+        <div th:if="${error}" class="alert-error" th:text="${error}"></div>
+
+        <!-- ==================== PROFILE / STATS (FR 3.1.1, 3.1.2, 3.1.33) ==================== -->
+        <div class="profile-section">
+            <img th:src="${user.avatarUrl}" alt="Avatar" class="profile-avatar">
+            <div>
+                <h1 th:text="${user.personaName}"></h1>
+                <p th:text="'Steam ID: ' + ${user.steamId}" style="color:#aaa;font-size:0.9rem;"></p>
+                <a th:href="${user.profileUrl}" target="_blank" style="color:#66c0f4;font-size:0.8rem;">View Steam Profile →</a>
+            </div>
+            <div class="profile-stats">
+                <div class="stat-card">
+                    <div class="stat-number" th:text="${gameCount}">0</div>
+                    <div class="stat-label">Games Owned</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" th:text="${#numbers.formatInteger(totalPlaytime/60, 0, 'COMMA')}">0</div>
+                    <div class="stat-label">Hours Played</div>
+                </div>
+            </div>
+            <!-- FR 3.1.13 – Resync Game Library -->
+            <form action="/resync" method="post">
+                <button type="submit" class="resync-btn">🔄 Sync Library</button>
+            </form>
+        </div>
+
+        <!-- ==================== RECENTLY PLAYED (FR 3.1.2) ==================== -->
+        <div class="section">
+            <h2>Recently Played Games</h2>
+            <div class="games-grid">
+                <div th:each="game : ${recentGames}" class="game-card">
+                    <div class="game-name" th:text="${game.name}"></div>
+                    <div class="game-playtime" th:text="'Played ' + ${#numbers.formatInteger(game.playtimeLastTwoWeeks/60, 0)} + ' hrs in last 2 weeks'"></div>
+                </div>
+                <div th:if="${recentGames.empty}">
+                    <p style="color:#aaa;">No recently played games found.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== MOST PLAYED (FR 3.1.2) ==================== -->
+        <div class="section">
+            <h2>Most Played Games</h2>
+            <div class="games-grid">
+                <div th:each="game : ${topGames}" class="game-card">
+                    <div class="game-name" th:text="${game.name}"></div>
+                    <div class="game-playtime" th:text="'Total: ' + ${#numbers.formatInteger(game.playtimeForever/60, 0)} + ' hours'"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== GROUP MANAGEMENT (FR 3.1.4) ==================== -->
+        <div class="section">
+            <h2>My Groups</h2>
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+                <input type="text" id="newGroupName" placeholder="Group name..."
+                       class="input-dark" style="width:220px;">
+                <button onclick="createGroup()" class="resync-btn">+ Create Group</button>
+            </div>
+            <div id="groupsList" class="games-grid">
+                <p style="color:#aaa;">Loading groups...</p>
+            </div>
+        </div>
+
+        <!-- ==================== GROUP ACTIONS PANEL ==================== -->
+        <!--
+            This entire section is hidden until the user clicks a group card above.
+            selectGroup() reveals it and sets activeGroupId.
+
+            FR 3.1.3  – Filtered Games List     → "Filtered Games List" button
+            FR 3.1.5  – Delete Group            → "Delete Group" button
+            FR 3.1.6  – Transfer Ownership      → input + "Transfer Ownership" button
+            FR 3.1.7  – Invite Link             → "Invite Link" button
+            FR 3.1.8  – Retrieve Members        → "View Members" button
+            FR 3.1.10 – Leave Group             → "Leave Group" button
+            FR 3.1.11 – Remove Member           → input + "Remove Member" button
+            FR 3.1.12 – Vote on Game            → input + "Cast Vote" / "Vote Results" buttons
+            FR 3.1.16 – Session History         → "Session History" button
+            FR 3.1.20 – Set Playtime Req.       → min-playtime input + "Apply"
+            FR 3.1.23 – Randomize               → "Randomize" button
+            FR 3.1.28 – Group Preference        → genre input + "Add Preference"
+            FR 3.1.29 – Share Games List        → "Share List" button
+            FR 3.1.30 – Schedule Session        → datetime input + "Schedule"
+            FR 3.1.31 – Group Calendar          → "Calendar" button
+        -->
+        <div class="section" id="groupActionsSection" style="display:none;">
+            <h2>Group Actions — <span id="activeGroupName"></span></h2>
+
+            <!-- Row 1: primary action buttons -->
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+                <button onclick="getFilteredGames()" class="resync-btn">🎮 Filtered Games List</button>
+                <button onclick="randomizeGames()" class="resync-btn">🎲 Randomize</button>
+                <button onclick="getInviteLink()" class="resync-btn">🔗 Invite Link</button>
+                <button onclick="shareGames()" class="resync-btn">📤 Share List</button>
+                <button onclick="getSessionHistory()" class="resync-btn">📜 Session History</button>
+                <button onclick="leaveGroup()" class="resync-btn" style="background:#ff4444;">🚪 Leave Group</button>
+                <!-- FR 3.1.5 -->
+                <button onclick="deleteGroup()" class="resync-btn" style="background:#c0392b;">🗑 Delete Group</button>
+                <!-- FR 3.1.8 -->
+                <button onclick="getMembers()" class="resync-btn" style="background:#2980b9;">👥 View Members</button>
+            </div>
+
+            <!-- Row 2: playtime filter + genre preference -->
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+                <label style="color:#aaa;">Min playtime (hrs):</label>
+                <input type="number" id="minPlaytime" value="0" min="0"
+                       class="input-dark" style="width:70px;">
+                <button onclick="setPlaytime()" class="resync-btn">Apply</button>
+
+                <label style="color:#aaa;margin-left:16px;">Group genre preference:</label>
+                <input type="text" id="genreInput" placeholder="e.g. RPG"
+                       class="input-dark" style="width:120px;">
+                <button onclick="addPreference()" class="resync-btn">Add Preference</button>
+            </div>
+
+            <!-- Row 3: schedule session -->
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+                <label style="color:#aaa;">Schedule session:</label>
+                <input type="datetime-local" id="sessionTime" class="input-dark">
+                <input type="number" id="sessionDuration" value="60" min="15"
+                       class="input-dark" style="width:70px;">
+                <label style="color:#aaa;">min</label>
+                <button onclick="scheduleSession()" class="resync-btn">📅 Schedule</button>
+                <button onclick="getCalendar()" class="resync-btn">📆 Calendar</button>
+            </div>
+
+            <!-- Row 4: FR 3.1.11 – Remove a specific member -->
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+                <label style="color:#aaa;">Remove member (ID):</label>
+                <input type="number" id="removeMemberId" placeholder="Member user ID"
+                       class="input-dark" style="width:180px;">
+                <button onclick="removeMember()" class="resync-btn" style="background:#e74c3c;">❌ Remove Member</button>
+            </div>
+
+            <!-- Row 5: FR 3.1.6 – Transfer ownership -->
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+                <label style="color:#aaa;">Transfer ownership to (ID):</label>
+                <input type="number" id="newOwnerId" placeholder="New owner user ID"
+                       class="input-dark" style="width:180px;">
+                <button onclick="transferOwnership()" class="resync-btn" style="background:#8e44ad;">🔑 Transfer Ownership</button>
+            </div>
+
+            <!-- Row 6: FR 3.1.12 – Vote on game -->
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+                <label style="color:#aaa;">Vote for game (ID):</label>
+                <input type="number" id="voteGameId" placeholder="Game ID"
+                       class="input-dark" style="width:140px;">
+                <button onclick="castVote()" class="resync-btn">🗳 Cast Vote</button>
+                <button onclick="getVoteResults()" class="resync-btn">📊 Vote Results</button>
+            </div>
+
+            <!-- Results output box (shared by all group action buttons) -->
+            <div id="groupActionsResult"
+                 style="margin-top:16px;background:#2a2a3e;border-radius:8px;padding:14px;
+                        display:none;white-space:pre-wrap;color:#ccc;font-size:0.88rem;">
+            </div>
+        </div>
+
+        <!-- ==================== JOIN REQUESTS (FR 3.1.17, 3.1.18, 3.1.19) ==================== -->
+        <div class="section" id="joinRequestsSection" style="display:none;">
+            <h2>Pending Join Requests</h2>
+            <div id="pendingRequests">
+                <p style="color:#aaa;">No pending requests.</p>
+            </div>
+        </div>
+
+        <!-- ==================== USER SEARCH (FR 3.1.21) ==================== -->
+        <div class="section">
+            <h2>Find a Player</h2>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <input type="text" id="userSearchQuery" placeholder="Username or Steam name..."
+                       class="input-dark" style="width:240px;">
+                <button onclick="searchUser()" class="resync-btn">🔍 Search</button>
+            </div>
+            <div id="searchResult" style="margin-top:12px;color:#aaa;"></div>
+        </div>
+
+        <!-- ==================== PROFILE TOOLS ==================== -->
+        <!--
+            FR 3.1.22b – Delete user data        → "Delete My Data" button
+            FR 3.1.24  – Tag favorite genres     → genre input + "Add Genre"
+            FR 3.1.26  – Weekly activity summary → "Weekly Summary" button
+            FR 3.1.27  – Monthly activity summary→ "Monthly Summary" button
+            FR 3.1.32  – Profile report          → "Profile Report" button
+        -->
+        <div class="section">
+            <h2>Profile Tools</h2>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+                <button onclick="getWeeklySummary()" class="resync-btn">📊 Weekly Summary</button>
+                <button onclick="getMonthlySummary()" class="resync-btn">📈 Monthly Summary</button>
+                <button onclick="getProfileReport()" class="resync-btn">📋 Profile Report</button>
+            </div>
+
+            <!-- FR 3.1.24 – Add favorite genre tag to own profile -->
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+                <input type="text" id="genreTag" placeholder="Favorite genre (e.g. Action)"
+                       class="input-dark" style="width:200px;">
+                <button onclick="addGenre()" class="resync-btn">+ Add Genre Tag</button>
+            </div>
+
+            <div id="profileToolResult"
+                 style="margin-top:12px;background:#2a2a3e;border-radius:8px;padding:12px;
+                        white-space:pre-wrap;display:none;color:#ccc;font-size:0.88rem;">
+            </div>
+
+            <!-- FR 3.1.22b – Delete all user data -->
+            <div style="margin-top:20px;border-top:1px solid #2a2a3e;padding-top:16px;">
+                <p style="color:#aaa;font-size:0.85rem;margin-bottom:8px;">
+                    Danger zone — this permanently removes all your data from the application.
+                </p>
+                <button onclick="confirmDelete()"
+                        style="background:#8b0000;color:#fff;padding:10px 18px;
+                               border:none;border-radius:6px;cursor:pointer;font-size:0.9rem;">
+                    🗑 Delete My Data
+                </button>
+            </div>
+        </div>
+
+        <footer>
+            <p>Game Match Making is not affiliated with Valve Corporation or Steam.</p>
+            <p>Steam and the Steam logo are trademarks of Valve Corporation.</p>
+        </footer>
+    </div><!-- /.container -->
+
+    <script>
+        // ================================================================
+        //  STATE
+        // ================================================================
+        let activeGroupId = null;
+
+        // ================================================================
+        //  UTILITIES
+        // ================================================================
+        function showResult(elId, data) {
+            const el = document.getElementById(elId);
+            el.style.display = 'block';
+            el.textContent = typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data);
+        }
+
+        /**
+         * Generic fetch wrapper.
+         * GET  → params appended as query string
+         * Everything else → params sent as application/x-www-form-urlencoded body
+         */
+        async function api(method, url, params) {
+            const opts = {
+                method,
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            };
+            if (params && method !== 'GET') {
+                opts.body = new URLSearchParams(params).toString();
+            }
+            const fullUrl = (params && method === 'GET')
+                ? url + '?' + new URLSearchParams(params)
+                : url;
+            const res = await fetch(fullUrl, opts);
+            const text = await res.text();
+            try { return JSON.parse(text); } catch { return text; }
+        }
+
+        // ================================================================
+        //  FR 3.1.1 / 3.1.33 – Login / create profile handled server-side
+        //  (SteamController + UserService.findOrCreateUser)
+        //  Nothing extra needed here — the dashboard only loads when
+        //  the user is already authenticated.
+        // ================================================================
+
+        // ================================================================
+        //  FR 3.1.4 – Create Group
+        // ================================================================
+        async function createGroup() {
+            const name = document.getElementById('newGroupName').value.trim();
+            if (!name) return alert('Enter a group name.');
+            const r = await api('POST', '/group/create', { name });
+            alert('Group created: ' + (r.name || JSON.stringify(r)));
+            loadGroups();
+        }
+
+        // ================================================================
+        //  Load groups list (populates My Groups section)
+        // ================================================================
+        async function loadGroups() {
+            const r = await api('GET', '/group/my-groups');
+            const el = document.getElementById('groupsList');
+            if (!Array.isArray(r) || r.length === 0) {
+                el.innerHTML = '<p style="color:#aaa;">No groups yet. Create one above.</p>';
+                return;
+            }
+            el.innerHTML = r.map(g =>
+                `<div class="game-card" style="cursor:pointer;"
+                      onclick="selectGroup(${g.groupId}, '${escHtml(g.name)}')">
+                    <div class="game-name">${escHtml(g.name)}</div>
+                    <div class="game-playtime">${g.memberCount || 0} members</div>
+                 </div>`
+            ).join('');
+        }
+
+        // Reveal the group actions panel for the selected group
+        function selectGroup(id, name) {
+            activeGroupId = id;
+            document.getElementById('activeGroupName').textContent = name;
+            document.getElementById('groupActionsSection').style.display = 'block';
+            document.getElementById('joinRequestsSection').style.display = 'block';
+            // Hide any stale result from a previous group selection
+            document.getElementById('groupActionsResult').style.display = 'none';
+            loadPendingRequests();
+        }
+
+        // Simple HTML escaper to prevent XSS in group names
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // ================================================================
+        //  FR 3.1.5 – Delete Group
+        // ================================================================
+        async function deleteGroup() {
+            if (!activeGroupId) return;
+            if (!confirm('Permanently delete this group? This cannot be undone.')) return;
+            await api('DELETE', `/group/${activeGroupId}`);
+            alert('Group deleted.');
+            activeGroupId = null;
+            document.getElementById('groupActionsSection').style.display = 'none';
+            document.getElementById('joinRequestsSection').style.display = 'none';
+            loadGroups();
+        }
+
+        // ================================================================
+        //  FR 3.1.6 – Transfer Ownership
+        // ================================================================
+        async function transferOwnership() {
+            const newOwnerId = document.getElementById('newOwnerId').value.trim();
+            if (!newOwnerId) return alert('Enter the user ID of the new owner.');
+            await api('POST', `/group/${activeGroupId}/transfer`, { newOwnerId });
+            alert('Ownership transferred.');
+        }
+
+        // ================================================================
+        //  FR 3.1.7 – Generate Invite Link
+        // ================================================================
+        async function getInviteLink() {
+            const r = await api('GET', `/group/${activeGroupId}/invite`);
+            showResult('groupActionsResult',
+                'Share this invite link:\n' + window.location.origin + (r.link || r));
+        }
+
+        // ================================================================
+        //  FR 3.1.8 – Retrieve Group Members
+        // ================================================================
+        async function getMembers() {
+            const r = await api('GET', `/group/${activeGroupId}/members`);
+            showResult('groupActionsResult', r);
+        }
+
+        // ================================================================
+        //  FR 3.1.9 – Join Group via invite link is handled server-side
+        //  (GET /group/join?token=... → GroupController.joinByToken)
+        //  No JS needed here.
+        // ================================================================
+
+        // ================================================================
+        //  FR 3.1.10 – Leave Group
+        // ================================================================
+        async function leaveGroup() {
+            if (!activeGroupId) return;
+            if (!confirm('Are you sure you want to leave this group?')) return;
+            await api('POST', `/group/${activeGroupId}/leave`);
+            alert('You have left the group.');
+            activeGroupId = null;
+            document.getElementById('groupActionsSection').style.display = 'none';
+            document.getElementById('joinRequestsSection').style.display = 'none';
+            loadGroups();
+        }
+
+        // ================================================================
+        //  FR 3.1.11 – Remove Group Member
+        // ================================================================
+        async function removeMember() {
+            const memberId = document.getElementById('removeMemberId').value.trim();
+            if (!memberId) return alert('Enter the user ID of the member to remove.');
+            if (!confirm(`Remove member ID ${memberId} from this group?`)) return;
+            const r = await api('DELETE', `/group/${activeGroupId}/members/${memberId}`);
+            alert(typeof r === 'string' ? r : 'Member removed.');
+            loadPendingRequests();
+        }
+
+        // ================================================================
+        //  FR 3.1.12 – Vote on Game Selection
+        // ================================================================
+        async function castVote() {
+            const gameId = document.getElementById('voteGameId').value.trim();
+            if (!gameId) return alert('Enter a game ID to vote for.');
+            // voteId 0 signals the backend to create a new vote record for this user
+            const r = await api('POST', `/group/${activeGroupId}/vote`, { voteId: 0, gameId });
+            showResult('groupActionsResult', r);
+        }
+
+        async function getVoteResults() {
+            const r = await api('GET', `/group/${activeGroupId}/vote/results`);
+            showResult('groupActionsResult', r);
+        }
+
+        // ================================================================
+        //  FR 3.1.13 – Resync Game Library
+        //  (POST /resync via the form in the profile section — no JS needed)
+        // ================================================================
+
+        // ================================================================
+        //  FR 3.1.16 – Retrieve Group Session History
+        // ================================================================
+        async function getSessionHistory() {
+            const r = await api('GET', `/group/${activeGroupId}/sessions`);
+            showResult('groupActionsResult', r);
+        }
+
+        // ================================================================
+        //  FR 3.1.17 / 3.1.18 – Accept / Decline Join Requests
+        //  (called from buttons rendered by loadPendingRequests below)
+        // ================================================================
+        async function resolveRequest(requestId, action) {
+            await api('POST', `/group/requests/${requestId}/${action}`);
+            loadPendingRequests();
+        }
+
+        // ================================================================
+        //  FR 3.1.19 – Retrieve Pending Join Requests
+        // ================================================================
+        async function loadPendingRequests() {
+            if (!activeGroupId) return;
+            const reqs = await api('GET', `/group/${activeGroupId}/requests`);
+            const el = document.getElementById('pendingRequests');
+            if (!Array.isArray(reqs) || reqs.length === 0) {
+                el.innerHTML = '<p style="color:#aaa;">No pending requests.</p>';
+                return;
+            }
+            el.innerHTML = reqs.map(r =>
+                `<div class="game-card">
+                    <div class="game-name">Join request from User #${r.requester?.userID ?? '?'}</div>
+                    <div style="display:flex;gap:8px;margin-top:8px;">
+                        <button onclick="resolveRequest(${r.requestId},'accept')"
+                                class="resync-btn" style="font-size:12px;padding:6px 12px;">✔ Accept</button>
+                        <button onclick="resolveRequest(${r.requestId},'decline')"
+                                class="resync-btn" style="background:#8b0000;font-size:12px;padding:6px 12px;">✘ Decline</button>
+                    </div>
+                 </div>`
+            ).join('');
+        }
+
+        // ================================================================
+        //  FR 3.1.20 – Set Playtime Requirement
+        // ================================================================
+        async function setPlaytime() {
+            const minHours = document.getElementById('minPlaytime').value;
+            await api('POST', `/group/${activeGroupId}/settings/playtime`, { minHours });
+            alert('Minimum playtime updated to ' + minHours + ' hour(s).');
+        }
+
+        // ================================================================
+        //  FR 3.1.21 – Search for a User
+        // ================================================================
+        async function searchUser() {
+            const query = document.getElementById('userSearchQuery').value.trim();
+            if (!query) return;
+            const r = await api('GET', '/users/search', { query });
+            const el = document.getElementById('searchResult');
+            if (r && typeof r === 'object' && r.profileName) {
+                el.innerHTML =
+                    `<a href="/profile/${encodeURIComponent(r.profileName)}"
+                        style="color:#66c0f4;">
+                        ${escHtml(r.profileName)} (User #${r.userId})
+                     </a>`;
+            } else {
+                el.textContent = 'No user found.';
+            }
+        }
+
+        // ================================================================
+        //  FR 3.1.23 – Randomize Games List
+        // ================================================================
+        async function randomizeGames() {
+            const r = await api('GET', `/group/${activeGroupId}/games/random`);
+            showResult('groupActionsResult', r);
+        }
+
+        // ================================================================
+        //  FR 3.1.24 – Tag Favorite Game Genres (on own profile)
+        // ================================================================
+        async function addGenre() {
+            const genre = document.getElementById('genreTag').value.trim();
+            if (!genre) return;
+            await api('POST', '/profile/genres', { genre });
+            alert('Genre tag added: ' + genre);
+            document.getElementById('genreTag').value = '';
+        }
+
+        // ================================================================
+        //  FR 3.1.26 – Share Weekly Activity Summary
+        // ================================================================
+        async function getWeeklySummary() {
+            const r = await api('GET', '/profile/activity/weekly');
+            showResult('profileToolResult', r.summary || r);
+        }
+
+        // ================================================================
+        //  FR 3.1.27 – Share Monthly Activity Summary
+        // ================================================================
+        async function getMonthlySummary() {
+            const r = await api('GET', '/profile/activity/monthly');
+            showResult('profileToolResult', r.summary || r);
+        }
+
+        // ================================================================
+        //  FR 3.1.28 – Add Group Preference (genre filter for group)
+        // ================================================================
+        async function addPreference() {
+            const genre = document.getElementById('genreInput').value.trim();
+            if (!genre) return alert('Enter a genre to add as group preference.');
+            await api('POST', `/group/${activeGroupId}/preferences`, { genre });
+            alert('Group preference applied: ' + genre);
+            document.getElementById('genreInput').value = '';
+        }
+
+        // ================================================================
+        //  FR 3.1.29 – Share Final Games List
+        // ================================================================
+        async function shareGames() {
+            const r = await api('POST', `/group/${activeGroupId}/games/share`);
+            showResult('groupActionsResult',
+                'Shareable link:\n' + window.location.origin + (r.shareLink || r));
+        }
+
+        // ================================================================
+        //  FR 3.1.30 – Schedule Group Game Session
+        // ================================================================
+        async function scheduleSession() {
+            const scheduledAt = document.getElementById('sessionTime').value;
+            const durationMinutes = document.getElementById('sessionDuration').value;
+            if (!scheduledAt) return alert('Pick a date and time for the session.');
+            const r = await api('POST', `/group/${activeGroupId}/sessions/schedule`,
+                { scheduledAt, durationMinutes });
+            showResult('groupActionsResult', 'Session scheduled: ' + JSON.stringify(r));
+        }
+
+        // ================================================================
+        //  FR 3.1.31 – Retrieve Group Calendar
+        // ================================================================
+        async function getCalendar() {
+            const r = await api('GET', `/group/${activeGroupId}/calendar`);
+            showResult('groupActionsResult', r);
+        }
+
+        // ================================================================
+        //  FR 3.1.32 – Generate User Profile Report
+        // ================================================================
+        async function getProfileReport() {
+            const r = await api('GET', '/profile/report');
+            showResult('profileToolResult', r.report || r);
+        }
+
+        // ================================================================
+        //  FR 3.1.3 – Request Filtered Games List
+        // ================================================================
+        async function getFilteredGames() {
+            const r = await api('GET', `/group/${activeGroupId}/games/filtered`);
+            showResult('groupActionsResult', r);
+        }
+
+        // ================================================================
+        //  FR 3.1.22b – Delete User Data
+        // ================================================================
+        async function confirmDelete() {
+            if (!confirm('This will permanently delete ALL your data from the application.\nThis cannot be undone. Are you sure?')) return;
+            await api('DELETE', '/profile/data');
+            window.location.href = '/';
+        }
+
+        // ================================================================
+        //  INIT – load groups when page is ready
+        // ================================================================
+        window.addEventListener('DOMContentLoaded', loadGroups);
+    </script>
+
+</body>
+</html>

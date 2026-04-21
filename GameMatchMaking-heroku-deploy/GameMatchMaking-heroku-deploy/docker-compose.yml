@@ -1,0 +1,50 @@
+services:
+  # Oracle Database
+  oracle-db:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: gamematch-oracle
+    ports:
+      - "1521:1521"
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:-password123}
+      ORACLE_DATABASE: ORACLE
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'SELECT 1 FROM dual' | sqlplus -s ${ORACLE_USERNAME:-system}/${ORACLE_PASSWORD:-password123}@XEPDB1 > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - gamematch-network
+
+  # Spring Boot Application
+  app:
+    build: .
+    container_name: gamematch-app
+    ports:
+      - "8080:8080"
+    environment:
+      ORACLE_USERNAME: ${ORACLE_USERNAME:-gamematch_user}
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:-password123}
+      STEAM_API_KEY: ${STEAM_API_KEY}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+    env_file:
+      - .env
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+    networks:
+      - gamematch-network
+    volumes:
+      - ./exports:/app/exports
+
+volumes:
+  oracle-data:
+    name: gamematch-oracle-data
+
+networks:
+  gamematch-network:
+    name: gamematch-network
