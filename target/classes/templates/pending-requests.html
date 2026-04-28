@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Pending Join Requests</title>
+</head>
+<body>
+    <h1 th:text="'Join requests for ' + ${group.groupName}">Pending Requests</h1>
+    <ul>
+        <li th:each="req : ${requests}">
+            <span th:text="${req.requestingUser.userProfile.profileName}"></span>
+            <a th:href="@{/groups/{id}/requests/{reqId}/accept(id=${group.groupID},reqId=${req.requestId})}">Accept</a>
+            <a th:href="@{/groups/{id}/requests/{reqId}/decline(id=${group.groupID},reqId=${req.requestId})}">Decline</a>
+        </li>
+    </ul>
+</body>
+</html>

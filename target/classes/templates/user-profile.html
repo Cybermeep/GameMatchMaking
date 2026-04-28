@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${viewedUser.userProfile.profileName} + ' Profile'">Profile</title>
+</head>
+<body>
+    <h1 th:text="${viewedUser.userProfile.profileName}"></h1>
+    <p>Steam ID: <span th:text="${viewedUser.steamID}"></span></p>
+    <h2>Games & Achievements</h2>
+    <ul>
+        <li th:each="ga : ${viewedUser.achievementData}" th:text="${ga.game.gameName} + ' - ' + ${ga.achievement.achievementName}"></li>
+    </ul>
+    <div th:if="${mutualFriends != null and !mutualFriends.isEmpty()}">
+        <h3>Mutual Friends</h3>
+        <ul>
+            <li th:each="friend : ${mutualFriends}" th:text="${friend.userProfile.profileName}"></li>
+        </ul>
+    </div>
+</body>
+</html>

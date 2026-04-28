@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Cast Your Vote</title>
+</head>
+<body>
+    <h1 th:text="'Vote for a game in ' + ${group.groupName}">Vote</h1>
+    <form th:action="@{/groups/{id}/vote(id=${group.groupID})}" method="post">
+        <select name="gameId">
+            <option th:each="game : ${games}" th:value="${game.gameID}" th:text="${game.gameName}"></option>
+        </select>
+        <button type="submit">Vote</button>
+    </form>
+</body>
+</html>

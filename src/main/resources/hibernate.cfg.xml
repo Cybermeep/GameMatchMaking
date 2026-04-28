@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD 3.7//EN"
+        "http://www.hibernate.org/dtd/hibernate-configuration-3.7.dtd">
+<hibernate-configuration>
+	<session-factory>
+		<!-- Oracle Database Configuration -->
+		<!-- NOTE: Username/password are set programmatically in HibernateUtil now -->
+		<property name="hibernate.dialect">org.hibernate.dialect.Oracle12cDialect</property>
+		<property name="hibernate.connection.driver_class">oracle.jdbc.OracleDriver</property>
+		<property name="hibernate.connection.url">jdbc:oracle:thin:@10.110.10.90:1521:oracle</property>
+
+		<!-- Username and password will be set by HibernateUtil at runtime -->
+		<property name="hibernate.connection.username">dummy</property>
+		<property name="hibernate.connection.password">dummy</property>
+
+		<!-- Connection pool settings -->
+		<property name="hibernate.c3p0.min_size">5</property>
+		<property name="hibernate.c3p0.max_size">20</property>
+		<property name="hibernate.c3p0.timeout">300</property>
+		<property name="hibernate.c3p0.max_statements">50</property>
+		<property name="hibernate.c3p0.idle_test_period">3000</property>
+
+		<!-- Hibernate properties -->
+		<property name="hibernate.hbm2ddl.auto">update</property> 
+		<property name="hibernate.show_sql">false</property>
+		<property name="hibernate.format_sql">false</property>
+
+		<!-- Entity mappings -->
+		<mapping class="edu.isu.gamematch.User"/>
+		<mapping class="edu.isu.gamematch.Game"/>
+		<mapping class="edu.isu.gamematch.Group"/>
+		<mapping class="edu.isu.gamematch.GameAchievement"/>
+		<mapping class="edu.isu.gamematch.Achievement"/>
+		<mapping class="edu.isu.gamematch.Tag"/>
+		<mapping class="edu.isu.gamematch.GroupVote"/>
+		<mapping class="edu.isu.gamematch.UserProfile"/>
+		<mapping class="edu.isu.gamematch.GroupSession"/>
+		<mapping class="edu.isu.gamematch.GroupJoinRequest"/>
+	</session-factory>
+</hibernate-configuration>

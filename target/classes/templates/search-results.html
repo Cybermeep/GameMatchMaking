@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Search Results</title>
+</head>
+<body>
+    <h1>Search results for "<span th:text="${query}"></span>"</h1>
+    <ul>
+        <li th:each="user : ${results}">
+            <a th:href="@{/users/{steamId}(steamId=${user.steamID})}" th:text="${user.userProfile.profileName}"></a>
+        </li>
+    </ul>
+</body>
+</html>

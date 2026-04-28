@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Group Games</title>
+</head>
+<body>
+    <h1 th:text="'Games for ' + ${group.groupName}">Group Games</h1>
+    <div th:if="${minPlaytime > 0}">
+        <p>Filtered by minimum playtime: <span th:text="${minPlaytime}"></span> minutes</p>
+    </div>
+    <table>
+        <tr>
+            <th>Game</th>
+            <th>Genre</th>
+            <th>Playtime (minutes)</th>
+            <th>Steam URL</th>
+        </tr>
+        <tr th:each="game : ${games}">
+            <td th:text="${game.gameName}"></td>
+            <td th:text="${game.genre}"></td>
+            <td th:text="${game.playtime}"></td>
+            <td><a th:href="${game.steamAppURL}" target="_blank">Store Page</a></td>
+        </tr>
+    </table>
+
+    <!-- Owner-only playtime requirement form -->
+    <div th:if="${group.groupOwner.userID == currentUser.userID}">
+        <form th:action="@{/groups/{id}/playtime-requirement(id=${group.groupID})}" method="post">
+            <label>Min. playtime (minutes): <input type="number" name="minPlaytimeMinutes" min="0"></label>
+            <button type="submit">Set</button>
+        </form>
+    </div>
+
+    <a th:href="@{/groups/{id}/vote(id=${group.groupID})}">Vote on Games</a>
+    <a th:href="@{/groups/{id}/randomize(id=${group.groupID})}">Randomize List</a>
+</body>
+</html>

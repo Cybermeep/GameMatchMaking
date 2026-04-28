@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Group Members</title></head>
+<body>
+    <h1 th:text="'Members of ' + ${group.groupName}">Members</h1>
+    <ul>
+        <li th:each="member : ${members}" th:text="${member.userProfile.profileName}"></li>
+    </ul>
+    <!-- Owner can remove a member (requires endpoint) -->
+    <div th:if="${group.groupOwner.userID == currentUser.userID}">
+        <h3>Remove Member</h3>
+        <form th:action="@{/groups/{id}/members/remove(id=${group.groupID})}" method="post">
+            <input type="number" name="userId" placeholder="User ID">
+            <button type="submit">Remove</button>
+        </form>
+    </div>
+    <form th:action="@{/groups/{id}/leave(id=${group.groupID})}" method="post">
+        <button type="submit">Leave Group</button>
+    </form>
+</body>
+</html>

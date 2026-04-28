@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Vote Results</title>
+</head>
+<body>
+    <h1 th:text="'Results for ' + ${group.groupName}">Results</h1>
+    <ul>
+        <li th:each="entry : ${tally}" th:text="${entry.key.gameName} + ' : ' + ${entry.value} + ' votes'"></li>
+    </ul>
+    <p th:if="${winner != null}">Winner: <strong th:text="${winner.gameName}"></strong></p>
+    <p th:unless="${winner != null}">No winner (tie or no votes)</p>
+</body>
+</html>
