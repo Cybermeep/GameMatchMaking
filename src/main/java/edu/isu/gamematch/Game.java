@@ -16,14 +16,16 @@ public class Game{
     @Column(name = "game_name", nullable = false)
     private String gameName;
 
-    @Column(name = "play_time_hours")
-    private int playTimeHours;
+    @Column(name = "playtime_forever")
+    private int playtimeForever;
 
-    @Column(name = "play_time_minutes")
-    private int playTimeMinutes;
+    @Column(name = "playtime_last_two_weeks")
+    private int playtimeLastTwoWeeks;
 
-    @Column(name = "genre")
-    private String genre;
+    @ElementCollection
+    @CollectionTable(name = "game_genres", joinColumns = @JoinColumn(name = "game_id"))
+    @Column(name = "genre_name")
+    private List<String> genres;
 
     @Column(name = "playtime_forever")
     private int playtimeForever;
@@ -38,21 +40,18 @@ public class Game{
     private List<GameAchievement> gameAchievements = new ArrayList<>();
 
     public Game(){
+        this.genres = new ArrayList<String>();
         this.tags = new ArrayList<Tag>();
+        this.gameAchievements = new ArrayList<GameAchievement>();
     }
 
-    public Game(String gameName, int playTimeHours, int playTimeMinutes){
-        this.gameName = gameName;
-        this.playTimeHours = playTimeHours;
-        this.playTimeMinutes = playTimeMinutes;
-        this.tags = new ArrayList<Tag>();
-    }
-
-    public Game(int gameID, String gameName, String genre){
+    public Game(int gameID, String gameName, int playtimeForever) {
         this.gameID = gameID;
         this.gameName = gameName;
-        this.genre = genre;
+        this.playtimeForever = playtimeForever;
+        this.genres = new ArrayList<String>();
         this.tags = new ArrayList<Tag>();
+        this.gameAchievements = new ArrayList<GameAchievement>();
     }
     
     //getters and setters
@@ -104,20 +103,20 @@ public class Game{
         this.tags = tags;
     }
 
-    public int getPlayTimeHours() {
-        return playTimeHours;
+    public int getPlaytime() {
+        return playtimeForever;
     }
 
-    public void setPlayTimeHours(int playTimeHours) {
-        this.playTimeHours = playTimeHours;
+    public void setPlaytime(int playtimeForever) {
+        this.playtimeForever = playtimeForever;
     }
 
-    public int getPlayTimeMinutes() {
-        return playTimeMinutes;
+    public int getPlaytimeLastTwoWeeks() {
+        return playtimeLastTwoWeeks;
     }
 
-    public void setPlayTimeMinutes(int playTimeMinutes) {
-        this.playTimeMinutes = playTimeMinutes;
+    public void setPlaytimeMinutes(int playtimeLastTwoWeeks) {
+        this.playtimeLastTwoWeeks = playtimeLastTwoWeeks;
     }
 
     public List<GameAchievement> getGameAchievements() {
@@ -137,61 +136,6 @@ public class Game{
         gameAchievements.remove(gameAchievement);
         gameAchievement.setGame(null);
     }
-
-    //methods
-
-    /*adds tag to game (assuming it's user generated tags I forgot what Tag was supposed to be for)
-    @param tag The tag to add
-    */
-    public void addTag(Tag tag){
-        if(tag == null){
-            return;
-        }
-        for(int i = 0; i < tags.size(); i++){
-            if(tags.get(i).equals(tag)){
-                return; //already in
-            }
-        }
-        tags.add(tag);
-    }
-
-    /*
-    removes tag from game
-    @param tag The tag to remove
-    @return boolean
-    */
-    public boolean removeTag(Tag tag){
-        return tags.remove(tag);
-    }
-
-    /*
-    checks if game has tag matching given tagname
-    @param tagName 
-    @return boolean
-    */
-    public boolean hasTag(String tagName){
-        for(int i = 0; i < tags.size(); i++){
-            if(tags.get(i).getTagName().equalsIgnoreCase(tagName)){
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /*
-    Returns playtime in hours 
-    @return int
-    */
-    public int getPlaytimeHours(){
-        return playtimeForever / 60;
-    }
-
-    //make game from steamGame (factory)
-    public static Game fromSteamGame(Object steamGame) {
-        return null;
-    }
-
-
 
     @Override
     public String toString(){
