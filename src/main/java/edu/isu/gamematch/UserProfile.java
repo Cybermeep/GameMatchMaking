@@ -7,10 +7,10 @@ import java.util.List;
 @Entity
 @Table(name = "user_profiles")
 public class UserProfile {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "profile_id")
-    private int profileId;
+    // @Id
+    // @GeneratedValue(strategy = GenerationType.IDENTITY)
+    // @Column(name = "profile_id")
+    // private int profileId;
 
     @Column(name = "profile_name", nullable = false)
     private String profileName;
