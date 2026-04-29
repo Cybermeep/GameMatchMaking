@@ -5,8 +5,10 @@ import java.util.ArrayList;
 
 public class UserOperations {
 
-    public UserOperations() {
-       
+    private DataHandler dh;
+
+    public UserOperations(DataHandler dataHandler) {
+        this.dh = dataHandler;
     }
 
     //compares user's achievements with the rest of the groups'
@@ -76,11 +78,6 @@ public class UserOperations {
         return diffAchievements;
     }
 
-    //still needs implementation
-    private boolean updateGroups(List<String> groupData) {
-        return true;
-    }
-
     public ExportData.ExportResult exportData(User user) {
         ExportCSV exporter = new ExportCSV();
         return exporter.exportData(user);
@@ -90,14 +87,38 @@ public class UserOperations {
         return (int) user.getSteamID();
     }
     
-    //still needs implementation
     public boolean resynchronizeUserData(User user) {
-       return true;
+        try {
+            dh.beginConnection();
+            User freshUser = dh.searchUser(user.getUserProfile().getProfileName());
+            if (freshUser == null) return false;
+
+            user.setSteamID(freshUser.getSteamID());
+            user.setGroupData(freshUser.getGroupData());
+            user.setAchievementData(freshUser.getAchievementData());
+            user.setFriends(freshUser.getFriends());
+            user.setUserProfile(freshUser.getUserProfile());
+            return true;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            dh.endConnection();
+        }
     }
 
-    //still needs implementation
     public boolean resynchronizeInstalledGames(User user) {
-       return true;
+        try {
+            dh.beginConnection();
+            User freshUser = dh.searchUser(user.getUserProfile().getProfileName());
+            if (freshUser == null) return false;
+
+            user.setUserGames(freshUser.getUserGames());
+            return true;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            dh.endConnection();
+        }
     }
 
     public void addFriend(User user, User newFriend) {

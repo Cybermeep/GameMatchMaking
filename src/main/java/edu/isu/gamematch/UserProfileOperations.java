@@ -38,9 +38,14 @@ public class UserProfileOperations
         return genre;
     }
 
-    public void setProfileName(String newName)
-    {
+    public boolean setProfileName(String newName) {
+        User existing = this.dataHandler.searchUser(newName);
+        if (existing != null) {
+            return false;
+        }
         this.userProfile.setProfileName(newName);
+        ((SQLHandler) this.dataHandler).updateUserProfile(this.userProfile);
+        return true;
     }
 
     public void setUser(User newUser)
