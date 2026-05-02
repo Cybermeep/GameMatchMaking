@@ -26,9 +26,6 @@ private int voteID;
     @Column(name = "vote_time")
     private Timestamp voteTime;
 
-    @Column(name = "timestamp")
-    private Timestamp timestamp;
-
     @ManyToOne
     @JoinColumn(name = "voted_by_user_id", nullable = false)
     private User votedByUser;
@@ -73,14 +70,6 @@ private int voteID;
         this.voteTime = voteTime;
     }
 
-    public Timestamp getTimestamp(){
-        return timestamp;
-    }
-
-    public void setTimestamp(Timestamp timestamp){
-        this.timestamp = timestamp;
-    }
-
     public User getVotedByUser(){
         return votedByUser;
     }
@@ -111,7 +100,7 @@ private int voteID;
             return false;
         }
         this.game = selectedGame;
-        this.timestamp = new Timestamp(System.currentTimeMillis());
+        this.voteTime = new Timestamp(System.currentTimeMillis());
         System.out.println("Vote cast for: " + selectedGame.getGameName());
         return true;
     }
@@ -119,7 +108,7 @@ private int voteID;
 
     /*
     changes existing vote to different game and updates timestamp.
-    @param newGame - newGame to vote for
+    @param newGame newGame to vote for
     @return boolean
      */
     public boolean updateVote(Game newGame){
@@ -133,13 +122,13 @@ private int voteID;
         }
         System.out.println("Vote updated from '" + this.game.getGameName()+ "' to '" + newGame.getGameName() + "'.");
         this.game = newGame;
-        this.timestamp = new Timestamp(System.currentTimeMillis());
+        this.voteTime = new Timestamp(System.currentTimeMillis());
         return true;
     }
 
     /*
     tallies all votes in list, returns map of Game to vote count
-    @param votes - list of GroupVotes to tally
+    @param votes list of GroupVotes to tally
     @return Map
      */
     public static Map<Game, Integer> tallyVotes(List<GroupVote> votes){
@@ -208,6 +197,6 @@ private int voteID;
         if(game != null){
             gameLabel = game.getGameName();
         }
-        return "GroupVote{" + "voteID=" + voteID + ", votedByUserID=" + votedByUser + ", game=" + gameLabel + ", timestamp=" + timestamp + "}";
+        return "GroupVote{" + "voteID=" + voteID + ", votedByUserID=" + votedByUser + ", game=" + gameLabel + ", voteTime=" + voteTime + "}";
     }
 }

@@ -1,26 +1,107 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+    <meta charset="UTF-8">
     <title>Group Calendar</title>
+    <style>
+        body {
+            font-family: 'Segoe UI',sans-serif;
+            background: #1b2838;
+            color: #c6d4df;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #66c0f4;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid rgba(102,192,244,0.2);
+            padding: 10px;
+            vertical-align: top;
+        }
+
+        th {
+            background: #16202d;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 6px;
+            text-decoration: none;
+            border: 1px solid #66c0f4;
+            color: #66c0f4;
+            margin: 0 5px;
+        }
+
+        .sub-nav {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .session {
+            background: rgba(102,192,244,0.1);
+            padding: 4px;
+            margin: 2px 0;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
-    <h1 th:text="'Sessions for ' + ${group.groupName}">Group Calendar</h1>
+    <div class="sub-nav">
+        <a th:href="@{/groups/{id}/games(id=${group.groupID})}" class="btn"> Games</a>
+        <a th:href="@{/groups/{id}/members(id=${group.groupID})}" class="btn"> Members</a>
+        <a th:href="@{/groups/{id}/sessions(id=${group.groupID})}" class="btn"> Sessions</a>
+        <a th:href="@{/groups/{id}/achievements(id=${group.groupID})}" class="btn"> Achievements</a>
+        <a th:href="@{/groups/{id}/vote(id=${group.groupID})}" class="btn"> Vote</a>
+        <a th:href="@{/groups/{id}/home(id=${group.groupID})}" class="btn"> Home</a>
+    </div>
+    <h1 th:text="${group.groupName} + ' - Calendar'"></h1>
+    <div style="margin-bottom:10px;">
+        <a th:href="@{/groups/{id}/calendar(id=${group.groupID},weekOffset=${weekOffset-1})}" class="btn">&lt; Previous Week</a>
+        <span th:text="|${startDate} - ${endDate}|"></span>
+        <a th:href="@{/groups/{id}/calendar(id=${group.groupID},weekOffset=${weekOffset+1})}" class="btn">Next Week &gt;</a>
+    </div>
     <table>
-        <tr><th>Date</th><th>Game</th><th>Duration (min)</th></tr>
-        <tr th:each="session : ${sessions}">
-            <td th:text="${session.scheduledDate}"></td>
-            <td th:text="${session.game.gameName}"></td>
-            <td th:text="${session.duration}"></td>
+        <tr>
+            <th>Mon</th>
+            <th>Tue</th>
+            <th>Wed</th>
+            <th>Thu</th>
+            <th>Fri</th>
+            <th>Sat</th>
+            <th>Sun</th>
+        </tr>
+        <tr>
+            <td th:each="day : ${#numbers.sequence(0,6)}">
+                <div th:each="gs : ${weekSessions}"
+                     th:if="${gs.scheduledDate.toLocalDate().dayOfWeek.value == day+1}">
+                    <div class="session">
+                        <strong th:text="${gs.game.gameName}"></strong><br />
+                        <span th:text="${#temporals.format(gs.scheduledDate,'HH:mm')}"></span>
+                    </div>
+                </div>
+            </td>
         </tr>
     </table>
-    <h3>Schedule a new session</h3>
-    <form th:action="@{/groups/{id}/sessions/schedule(id=${group.groupID})}" method="post">
-        Game: <select name="gameId">
-            <option th:each="game : ${group.games}" th:value="${game.gameID}" th:text="${game.gameName}"></option>
-        </select><br />
-        Date & Time: <input type="datetime-local" name="scheduledDateTime"><br />
-        Duration (minutes): <input type="number" name="durationMinutes" min="1"><br />
-        <button type="submit">Schedule</button>
-    </form>
+    <div style="margin-top:10px;">
+        <form th:action="@{/groups/{id}/sessions/schedule(id=${group.groupID})}" method="post">
+            <select name="gameId" required>
+                <option value="">-- Select Game --</option>
+                <option th:each="game : ${schedulableGames}" th:value="${game.gameID}" th:text="${game.gameName}"></option>
+            </select>
+            <input type="datetime-local" name="scheduledDateTime" required>
+            <input type="number" name="durationMinutes" placeholder="Minutes" min="1" required>
+            <button type="submit" class="btn">Schedule</button>
+        </form>
+    </div>
 </body>
 </html>

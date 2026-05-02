@@ -12,23 +12,18 @@ public class UserService {
     @Autowired
     private SQLHandler sqlHandler;
     
-    public User findOrCreateUser(String steamId, String personaName) {
-        // Try to find existing user by Steam ID
-        User user = sqlHandler.searchUserBySteamId(steamId);
-        
-        if (user == null) {
-            // Create new user
-            user = new User();
-            user.setSteamID(Long.parseLong(steamId));
-            
-            // Create user profile
-            UserProfile profile = new UserProfile(personaName, user);
-            user.setUserProfile(profile);
-            
-            // Save to database
-            sqlHandler.createUser(user);
-        }
-        
-        return user;
+   public User findOrCreateUser(String steamId, String personaName) {
+    User user = sqlHandler.searchUserBySteamId(steamId);
+
+    if (user == null) {
+        user = new User();
+        user.setSteamID(Long.parseLong(steamId));
+        user.setPersonaName(personaName);               
+        UserProfile profile = new UserProfile(personaName, user);
+        user.setUserProfile(profile);
+        sqlHandler.createUser(user);
     }
+
+    return user;
+}
 }

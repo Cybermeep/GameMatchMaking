@@ -3,6 +3,8 @@ edu\isu\gamematch\UserProfile.class
 edu\isu\gamematch\steam\SteamGame.class
 edu\isu\gamematch\config\AppConfig.class
 edu\isu\gamematch\imports\ImportData$RawData.class
+edu\isu\gamematch\GroupPreferenceVote.class
+edu\isu\gamematch\service\OnlineUserTracker.class
 edu\isu\gamematch\Game.class
 edu\isu\gamematch\imports\ImportData$TransformedData.class
 edu\isu\gamematch\Tag.class
@@ -11,6 +13,7 @@ edu\isu\gamematch\imports\ImportData$ValidationResult.class
 edu\isu\gamematch\SQLHandler.class
 edu\isu\gamematch\GameAchievement.class
 edu\isu\gamematch\DataParser.class
+edu\isu\gamematch\GroupPreference.class
 edu\isu\gamematch\HibernateUtil.class
 edu\isu\gamematch\imports\ImportData$ImportRecord.class
 edu\isu\gamematch\controller\GlobalExceptionHandler.class
@@ -27,6 +30,8 @@ edu\isu\gamematch\export\ExportData$ExportStatus.class
 edu\isu\gamematch\steam\SteamController.class
 edu\isu\gamematch\config\SecurityConfig.class
 edu\isu\gamematch\steam\SteamDataParser.class
+edu\isu\gamematch\config\DatabaseInitializer.class
+edu\isu\gamematch\service\GraphService.class
 edu\isu\gamematch\HibernateTest.class
 edu\isu\gamematch\service\UserService.class
 edu\isu\gamematch\UserProfileOperations.class
@@ -34,6 +39,7 @@ edu\isu\gamematch\GroupJoinRequest.class
 edu\isu\gamematch\DataParser$ParseStatus.class
 edu\isu\gamematch\Group.class
 edu\isu\gamematch\UserGame.class
+edu\isu\gamematch\controller\LocalAuthController.class
 edu\isu\gamematch\MainApplication.class
 edu\isu\gamematch\export\ExportData.class
 edu\isu\gamematch\GroupOperations.class

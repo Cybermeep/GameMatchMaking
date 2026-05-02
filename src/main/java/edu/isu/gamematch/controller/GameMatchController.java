@@ -2,6 +2,8 @@ package edu.isu.gamematch.controller;
 
 import edu.isu.gamematch.*;
 import edu.isu.gamematch.export.ExportCSV;
+import edu.isu.gamematch.service.GraphService;
+import edu.isu.gamematch.service.OnlineUserTracker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Controller;
@@ -10,16 +12,19 @@ import org.springframework.web.bind.annotation.*;
 import org.hibernate.Session;
 import org.hibernate.Hibernate;
 import org.hibernate.Transaction;
-
-
+import org.hibernate.query.Query;
 
 import javax.servlet.http.HttpSession;
 import java.io.*;
 import java.nio.file.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.DayOfWeek;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.nio.charset.StandardCharsets;
+
 
 @Controller
 public class GameMatchController {
@@ -32,7 +37,37 @@ public class GameMatchController {
     @Autowired
     private ExportCSV exportCSV;
 
-    // ==================== GROUP DETAIL & GAMES (3.1.3, 3.1.20) ====================
+    @Autowired
+    private GraphService graphService;
+
+    @Autowired
+    private OnlineUserTracker onlineTracker;
+
+    // ==================== GROUP HOME ====================
+    @GetMapping("/groups/{id}/home")
+    public String groupHome(@PathVariable int id, HttpSession session, Model model) {
+        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
+        if (currentUser == null) return "redirect:/";
+        Session hs = HibernateUtil.getSessionFactory().openSession();
+        Group group = null;
+        try {
+            group = hs.get(Group.class, id);
+            if (group == null) return "redirect:/";
+            Hibernate.initialize(group.getMembers());
+            Hibernate.initialize(group.getGames());
+            for (User member : group.getMembers()) {
+                Hibernate.initialize(member.getUserProfile());
+                member.setOnline(onlineTracker.isOnline(member.getUserID()));
+            }
+        } finally {
+            hs.close();
+        }
+        model.addAttribute("group", group);
+        model.addAttribute("currentUser", currentUser);
+        return "group-home";
+    }
+
+    // ==================== GROUP GAMES (3.1.3, 3.1.20) ====================
     @GetMapping("/groups/{groupId}/games")
 public String getFilteredGames(@PathVariable int groupId,
                                @RequestParam(defaultValue = "0") int minPlaytime,
@@ -40,89 +75,148 @@ public String getFilteredGames(@PathVariable int groupId,
     User currentUser = (User) session.getAttribute("db_user");
     if (currentUser == null) return "redirect:/";
 
-    // Load group with members and their achievements eagerly
     Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
     Group group = null;
     List<Game> sharedGames = new ArrayList<>();
-    
+    List<GroupPreference> groupTags = new ArrayList<>();
     try {
         group = hibernateSession.createQuery(
             "FROM Group g LEFT JOIN FETCH g.members WHERE g.groupID = :id", Group.class)
             .setParameter("id", groupId)
             .uniqueResult();
-        
         if (group == null) {
             hibernateSession.close();
             return "redirect:/dashboard";
         }
-        
-        // Compute shared games (Fix 5.1)
         GroupOperations ops = new GroupOperations();
         sharedGames = ops.getSharedGames(group, sqlHandler);
-        
-        // Apply minimum playtime filter
-        if (minPlaytime > 0) {
+
+        // Use stored requirement if no explicit query parameter
+        int effectiveMinPlaytime = minPlaytime;
+        if (effectiveMinPlaytime == 0 && group.getMinPlaytimeRequirement() > 0) {
+            effectiveMinPlaytime = group.getMinPlaytimeRequirement();
+        }
+        if (effectiveMinPlaytime > 0) {
+            final int filterMinutes = effectiveMinPlaytime;
             sharedGames = sharedGames.stream()
-                    .filter(g -> g.getPlaytime() >= minPlaytime)
+                    .filter(g -> g.getPlaytime() >= filterMinutes)
                     .collect(Collectors.toList());
         }
-        
-        // Rank by playtime + genre (Fix 5.2)
         ops.rankList(group, currentUser, sqlHandler);
-        
+
+        // Fetch group tags (preferences) for genre assignment
+        groupTags = hibernateSession.createQuery(
+            "FROM GroupPreference WHERE group.groupID = :gid", GroupPreference.class)
+            .setParameter("gid", groupId)
+            .list();
     } finally {
         hibernateSession.close();
     }
-
     model.addAttribute("group", group);
     model.addAttribute("games", sharedGames);
     model.addAttribute("minPlaytime", minPlaytime);
     model.addAttribute("currentUser", currentUser);
+    model.addAttribute("groupTags", groupTags);
     return "group-games";
+}
+
+@PostMapping("/groups/{groupId}/update-game-genre")
+public String updateGameGenre(@PathVariable int groupId,
+                              @RequestParam int gameId,
+                              @RequestParam String genre,
+                              HttpSession session) {
+    User currentUser = (User) session.getAttribute("db_user");
+    if (currentUser == null) return "redirect:/";
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = hs.beginTransaction();
+        Group group = hs.get(Group.class, groupId);
+        if (group == null) { tx.commit(); return "redirect:/dashboard"; }
+        Hibernate.initialize(group.getMembers());
+        // Compare by userID
+        boolean isMember = group.getMembers().stream()
+                .anyMatch(m -> m.getUserID() == currentUser.getUserID());
+        if (!isMember) { tx.commit(); return "redirect:/dashboard"; }
+        Game game = hs.get(Game.class, gameId);
+        if (game != null) {
+            game.setGenre(genre);
+            hs.merge(game);
+        }
+        tx.commit();
+    } catch (Exception e) {
+        if (tx != null) tx.rollback();
+    } finally { hs.close(); }
+    return "redirect:/groups/" + groupId + "/games";
 }
 
     // ==================== GROUP MEMBERS (3.1.8) ====================
     @GetMapping("/groups/{groupId}/members")
-public String getGroupMembers(@PathVariable int groupId, HttpSession session, Model model) {
-    User currentUser = (User) session.getAttribute(SESSION_DB_USER);
-    if (currentUser == null) return "redirect:/";
-
-    Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
-    Group group = null;
-    try {
-        group = hibernateSession.get(Group.class, groupId);
-        if (group == null) return "redirect:/";
-        Hibernate.initialize(group.getMembers());
-    } finally {
-        hibernateSession.close();
+    public String getGroupMembers(@PathVariable int groupId, HttpSession session, Model model) {
+        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
+        if (currentUser == null) return "redirect:/";
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        Group group = null;
+        try {
+            group = hibernateSession.get(Group.class, groupId);
+            if (group == null) return "redirect:/";
+            Hibernate.initialize(group.getMembers());
+            for (User member : group.getMembers()) {
+                Hibernate.initialize(member.getUserProfile());
+                member.setOnline(onlineTracker.isOnline(member.getUserID()));
+            }
+        } finally {
+            hibernateSession.close();
+        }
+        model.addAttribute("group", group);
+        model.addAttribute("members", group.getMembers());
+        model.addAttribute("currentUser", currentUser);
+        return "group-members";
     }
-
-    model.addAttribute("group", group);
-    model.addAttribute("members", group.getMembers());
-    model.addAttribute("currentUser", currentUser);
-    return "group-members";
-}
 
     // ==================== JOIN GROUP VIA INVITE (3.1.9) ====================
     @GetMapping("/groups/join/{inviteToken}")
-    public String joinGroupViaInvite(@PathVariable String inviteToken, HttpSession session, Model model) {
-        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
-        if (currentUser == null) return "redirect:/";
-        GroupJoinRequest joinReq = sqlHandler.getGroupJoinRequestByToken(inviteToken);
+public String joinGroupViaInvite(@PathVariable String inviteToken, HttpSession session, Model model) {
+    User currentUser = (User) session.getAttribute(SESSION_DB_USER);
+    if (currentUser == null) return "redirect:/";
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = hs.beginTransaction();
+        GroupJoinRequest joinReq = (GroupJoinRequest) hs.createQuery(
+            "FROM GroupJoinRequest WHERE inviteToken = :token AND status = 'PENDING'", GroupJoinRequest.class)
+            .setParameter("token", inviteToken)
+            .uniqueResult();
         if (joinReq == null) {
+            tx.commit(); // finish empty trans
             model.addAttribute("error", "Invalid or expired invite link.");
             return "redirect:/dashboard";
         }
         Group group = joinReq.getGroup();
-        if (group.getMembers().contains(currentUser)) {
+        if (group == null) {
+            tx.commit();
+            model.addAttribute("error", "Group no longer exists.");
+            return "redirect:/dashboard";
+        }
+        User attachedUser = hs.get(User.class, currentUser.getUserID());
+        if (group.getMembers().contains(attachedUser)) {
+            tx.commit();
             model.addAttribute("error", "You are already a member.");
             return "redirect:/dashboard";
         }
-        GroupJoinRequest newReq = new GroupJoinRequest(group, currentUser, null);
-        sqlHandler.createGroupJoinRequest(newReq);
-        model.addAttribute("message", "Join request sent to group owner.");
-        return "redirect:/dashboard";
+        GroupJoinRequest newReq = new GroupJoinRequest(group, attachedUser, null);
+        newReq.setStatus("PENDING");
+        hs.save(newReq);
+        tx.commit();
+        model.addAttribute("success", "Join request sent to group owner.");
+    } catch (Exception e) {
+        if (tx != null) tx.rollback();
+        model.addAttribute("error", "Something went wrong: " + e.getMessage());
+    } finally {
+        hs.close();
     }
+    return "redirect:/dashboard";
+}
 
     // ==================== LEAVE GROUP (3.1.10) ====================
     @PostMapping("/groups/{groupId}/leave")
@@ -137,32 +231,44 @@ public String getGroupMembers(@PathVariable int groupId, HttpSession session, Mo
         return "redirect:/dashboard";
     }
 
+    private UserProfile getProfileOrNull(User user) {
+    if (user.getUserProfile() == null) return null;
+    // initialize lazy favoriteGenres inside an open session if needed
+    return user.getUserProfile();
+}
+
+
     // ==================== PENDING JOIN REQUESTS (3.1.19) ====================
     @GetMapping("/groups/{groupId}/requests/pending")
-public String getPendingJoinRequests(@PathVariable int groupId, HttpSession session, Model model) {
-    User currentUser = (User) session.getAttribute(SESSION_DB_USER);
-    if (currentUser == null) return "redirect:/";
-
-    Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
-    Group group = null;
-    List<GroupJoinRequest> pendingRequests = new ArrayList<>();
-    try {
-        group = hibernateSession.get(Group.class, groupId);
-        if (group == null || group.getGroupOwner().getUserID() != currentUser.getUserID()) {
-            return "redirect:/";
+    public String getPendingJoinRequests(@PathVariable int groupId, HttpSession session, Model model) {
+        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
+        if (currentUser == null) return "redirect:/";
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        Group group = null;
+        List<GroupJoinRequest> pendingRequests = new ArrayList<>();
+        try {
+            group = hibernateSession.get(Group.class, groupId);
+            if (group == null || group.getGroupOwner().getUserID() != currentUser.getUserID()) {
+                return "redirect:/";
+            }
+            Hibernate.initialize(group.getJoinRequests());
+            pendingRequests = group.getJoinRequests().stream()
+                    .filter(r -> "PENDING".equals(r.getStatus()))
+                    .collect(Collectors.toList());
+            for (GroupJoinRequest req : pendingRequests) {
+                Hibernate.initialize(req.getRequestingUser());
+                if (req.getRequestingUser() != null) {
+                    Hibernate.initialize(req.getRequestingUser().getUserProfile());
+                }
+            }
+        } finally {
+            hibernateSession.close();
         }
-        Hibernate.initialize(group.getJoinRequests());
-        pendingRequests = group.getJoinRequests().stream()
-                .filter(r -> "PENDING".equals(r.getStatus()))
-                .collect(Collectors.toList());
-    } finally {
-        hibernateSession.close();
+        model.addAttribute("group", group);
+        model.addAttribute("requests", pendingRequests);
+        model.addAttribute("currentUser", currentUser);
+        return "pending-requests";
     }
-
-    model.addAttribute("group", group);
-    model.addAttribute("requests", pendingRequests);
-    return "pending-requests";
-}
 
     // ==================== ACCEPT JOIN REQUEST (3.1.17) ====================
     @PostMapping("/groups/{groupId}/requests/{requestId}/accept")
@@ -194,12 +300,11 @@ public String getPendingJoinRequests(@PathVariable int groupId, HttpSession sess
         return "redirect:/groups/" + groupId + "/requests/pending";
     }
 
-    // ==================== VOTE ON GAME (3.1.12) ====================
-    @GetMapping("/groups/{groupId}/vote")
+    // ==================== VOTE PAGE (FIXED lazy init of favoriteGenres) ====================
+@GetMapping("/groups/{groupId}/vote")
 public String showVotePage(@PathVariable int groupId, HttpSession session, Model model) {
     User currentUser = (User) session.getAttribute(SESSION_DB_USER);
     if (currentUser == null) return "redirect:/";
-
     Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
     Group group = null;
     List<Game> games = new ArrayList<>();
@@ -211,19 +316,38 @@ public String showVotePage(@PathVariable int groupId, HttpSession session, Model
         for (User member : group.getMembers()) {
             Hibernate.initialize(member.getAchievementData());
         }
+        // Refresh current user from session so its profile/genres are loaded
+        User freshCurrent = hibernateSession.get(User.class, currentUser.getUserID());
+        Hibernate.initialize(freshCurrent.getUserProfile());
+        if (freshCurrent.getUserProfile() != null) {
+            Hibernate.initialize(freshCurrent.getUserProfile().getFavoriteGenres());
+        }
+        session.setAttribute(SESSION_DB_USER, freshCurrent);
+        currentUser = freshCurrent;
 
+        if (group.isVotingClosed()) {
+            model.addAttribute("error", "Voting is closed.");
+            return "redirect:/groups/" + groupId + "/vote/results";
+        }
         GroupOperations ops = new GroupOperations();
         games = ops.getSharedGames(group, sqlHandler);
         int minPlaytime = group.getMinPlaytimeRequirement();
         if (minPlaytime > 0) {
             games = games.stream().filter(g -> g.getPlaytime() >= minPlaytime).collect(Collectors.toList());
         }
+        UserProfile profile = currentUser.getUserProfile();
+        List<String> favoriteGenres = (profile != null) ? profile.getFavoriteGenres() : new ArrayList<>();
+        games.sort(Comparator.<Game>comparingDouble(game -> {
+            double base = game.getPlaytime() / 60.0;
+            double bonus = favoriteGenres.contains(game.getGenre()) ? 10.0 : 0.0;
+            return base + bonus;
+        }).reversed().thenComparing(Game::getGameName));
     } finally {
         hibernateSession.close();
     }
-
     model.addAttribute("group", group);
     model.addAttribute("games", games);
+    model.addAttribute("currentUser", currentUser);
     return "vote";
 }
 
@@ -233,8 +357,7 @@ public String showVotePage(@PathVariable int groupId, HttpSession session, Model
         if (currentUser == null) return "redirect:/";
         Group group = sqlHandler.getGroupById(groupId);
         Game game = sqlHandler.getGameById(gameId);
-        if (group == null || game == null) return "redirect:/groups/" + groupId;
-
+        if (group == null || game == null || group.isVotingClosed()) return "redirect:/groups/" + groupId;
         List<GroupVote> existingVotes = sqlHandler.getVotesByUser(currentUser);
         GroupVote existing = existingVotes.stream()
                 .filter(v -> v.getGroup().getGroupID() == groupId)
@@ -263,27 +386,91 @@ public String showVotePage(@PathVariable int groupId, HttpSession session, Model
         return "vote-results";
     }
 
+    @PostMapping("/groups/{groupId}/decide-vote")
+    public String decideVote(@PathVariable int groupId, HttpSession session, Model model) {
+        User currentUser = (User) session.getAttribute("db_user");
+        if (currentUser == null) return "redirect:/";
+        Session hs = HibernateUtil.getSessionFactory().openSession();
+        Transaction tx = null;
+        try {
+            tx = hs.beginTransaction();
+            Group group = hs.get(Group.class, groupId);
+            if (group == null || group.getGroupOwner().getUserID() != currentUser.getUserID())
+                return "redirect:/";
+            List<GroupVote> votes = group.getVotes();
+            Map<Game, Integer> tally = GroupVote.tallyVotes(votes);
+            Game winner = GroupVote.getWinner(tally);
+            group.setVotingClosed(true);
+            hs.merge(group);
+            tx.commit();
+            model.addAttribute("group", group);
+            model.addAttribute("tally", tally);
+            model.addAttribute("winner", winner);
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+        } finally { hs.close(); }
+        return "vote-results";
+    }
+
     // ==================== USER PROFILE (3.1.15) ====================
     @GetMapping("/users/{steamId}")
     public String getUserProfile(@PathVariable String steamId, HttpSession session, Model model) {
-        User viewedUser = sqlHandler.getUserBySteamId(steamId);
-        if (viewedUser == null) return "redirect:/dashboard";
         User currentUser = (User) session.getAttribute(SESSION_DB_USER);
-        model.addAttribute("viewedUser", viewedUser);
-        if (currentUser != null && !currentUser.equals(viewedUser)) {
-            List<User> mutual = new ArrayList<>();
-            for (User friend : currentUser.getFriends()) {
-                if (viewedUser.getFriends().contains(friend)) mutual.add(friend);
+        Session hs = HibernateUtil.getSessionFactory().openSession();
+        try {
+            User viewedUser = hs.createQuery("FROM User WHERE steamID = :sid", User.class)
+                    .setParameter("sid", Long.parseLong(steamId))
+                    .uniqueResult();
+            if (viewedUser == null) {
+                return "redirect:/dashboard";
             }
-            model.addAttribute("mutualFriends", mutual);
+            Hibernate.initialize(viewedUser.getUserProfile());
+            Hibernate.initialize(viewedUser.getAchievementData());
+            for (GameAchievement ga : viewedUser.getAchievementData()) {
+                Hibernate.initialize(ga.getGame());
+            }
+            model.addAttribute("viewedUser", viewedUser);
+            if (currentUser != null && !currentUser.equals(viewedUser)) {
+                List<User> mutual = new ArrayList<>();
+                for (User friend : currentUser.getFriends()) {
+                    if (viewedUser.getFriends().contains(friend)) mutual.add(friend);
+                }
+                model.addAttribute("mutualFriends", mutual);
+            }
+        } finally {
+            hs.close();
         }
         return "user-profile";
+    }
+
+    @GetMapping("/users/by-id")
+    public String getUserByLocalId(@RequestParam int userId, Model model) {
+        Session hs = HibernateUtil.getSessionFactory().openSession();
+        try {
+            User user = hs.get(User.class, userId);
+            if (user == null) return "redirect:/dashboard";
+            Hibernate.initialize(user.getUserProfile());
+            Hibernate.initialize(user.getAchievementData());
+            for (GameAchievement ga : user.getAchievementData()) {
+                Hibernate.initialize(ga.getGame());
+            }
+            model.addAttribute("viewedUser", user);
+            return "user-profile";
+        } finally {
+            hs.close();
+        }
     }
 
     // ==================== SEARCH USER (3.1.21) ====================
     @GetMapping("/users/search")
     public String searchUsers(@RequestParam String q, Model model) {
         List<User> results = sqlHandler.searchUsersByPersonaName(q);
+        Session hs = HibernateUtil.getSessionFactory().openSession();
+        try {
+            for (User u : results) {
+                Hibernate.initialize(u.getUserProfile());
+            }
+        } finally { hs.close(); }
         model.addAttribute("results", results);
         model.addAttribute("query", q);
         return "search-results";
@@ -291,81 +478,131 @@ public String showVotePage(@PathVariable int groupId, HttpSession session, Model
 
     // ==================== COMPARE ACHIEVEMENTS (3.1.22a) ====================
     @GetMapping("/groups/{groupId}/achievements")
-public String compareAchievements(@PathVariable int groupId, Model model) {
-    Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
-    Group group = null;
-    Map<User, List<Achievement>> userAchievements = new HashMap<>();
-    try {
-        group = hibernateSession.get(Group.class, groupId);
-        if (group == null) return "redirect:/";
-        Hibernate.initialize(group.getMembers());
-        for (User member : group.getMembers()) {
-            Hibernate.initialize(member.getAchievementData());
-            List<Achievement> achievements = member.getAchievementData().stream()
-                    .map(GameAchievement::getAchievement)
-                    .collect(Collectors.toList());
-            userAchievements.put(member, achievements);
-        }
-    } finally {
-        hibernateSession.close();
+    public String compareAchievements(@PathVariable int groupId, Model model) {
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        Group group = null;
+        Map<User, List<Achievement>> userAchievements = new HashMap<>();
+        try {
+            group = hibernateSession.get(Group.class, groupId);
+            if (group == null) return "redirect:/";
+            Hibernate.initialize(group.getMembers());
+            for (User member : group.getMembers()) {
+                Hibernate.initialize(member.getUserProfile());
+                Hibernate.initialize(member.getAchievementData());
+                List<Achievement> achievements = member.getAchievementData().stream()
+                        .map(GameAchievement::getAchievement)
+                        .collect(Collectors.toList());
+                userAchievements.put(member, achievements);
+            }
+        } finally { hibernateSession.close(); }
+        model.addAttribute("group", group);
+        model.addAttribute("userAchievements", userAchievements);
+        return "achievement-comparison";
     }
 
-    model.addAttribute("group", group);
-    model.addAttribute("userAchievements", userAchievements);
-    return "achievement-comparison";
+    @GetMapping("/groups/join")
+public String joinGroupByToken(@RequestParam String token) {
+    return "redirect:/groups/join/" + token;
 }
 
-    // ==================== GENRE TAGS (3.1.24) ====================
-    @GetMapping("/profile/genres")
-    public String showGenreTags(HttpSession session, Model model) {
-        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
-        if (currentUser == null) return "redirect:/";
-        List<String> available = Arrays.asList("Action","RPG","Strategy","Shooter","Adventure","Puzzle","Simulation","Sports","Racing","Fighting");
-        model.addAttribute("availableGenres", available);
-        model.addAttribute("userGenres", currentUser.getUserProfile().getFavoriteGenres());
-        return "genre-tags";
-    }
-
-    @PostMapping("/profile/genres/add")
-    public String addGenreTag(@RequestParam String genre, HttpSession session) {
-        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
-        if (currentUser != null && currentUser.getUserProfile() != null) {
-            if (!currentUser.getUserProfile().getFavoriteGenres().contains(genre)) {
-                currentUser.getUserProfile().getFavoriteGenres().add(genre);
-                sqlHandler.updateUserProfile(currentUser.getUserProfile());
-            }
-        }
-        return "redirect:/profile/genres";
-    }
-
-    @PostMapping("/profile/genres/remove")
-    public String removeGenreTag(@RequestParam String genre, HttpSession session) {
-        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
-        if (currentUser != null && currentUser.getUserProfile() != null) {
-            currentUser.getUserProfile().getFavoriteGenres().remove(genre);
-            sqlHandler.updateUserProfile(currentUser.getUserProfile());
-        }
-        return "redirect:/profile/genres";
-    }
-
-    // ==================== GROUP SESSION SCHEDULING (3.1.30, 3.1.31) ====================
-    @GetMapping("/groups/{groupId}/sessions")
-public String getGroupCalendar(@PathVariable int groupId, Model model) {
-    Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
-    Group group = null;
-    List<GroupSession> sessions = new ArrayList<>();
+    // ==================== GENRE TAGS (Fixed) ====================
+@GetMapping("/profile/genres")
+public String showGenreTags(HttpSession session, Model model) {
+    User sessionUser = (User) session.getAttribute(SESSION_DB_USER);
+    if (sessionUser == null) return "redirect:/";
+    Session hs = HibernateUtil.getSessionFactory().openSession();
     try {
-        group = hibernateSession.get(Group.class, groupId);
-        if (group == null) return "redirect:/";
-        Hibernate.initialize(group.getSessions());
-        sessions = new ArrayList<>(group.getSessions());
-    } finally {
-        hibernateSession.close();
-    }
+        User user = hs.get(User.class, sessionUser.getUserID());
+        Hibernate.initialize(user.getUserProfile());
+        if (user.getUserProfile() != null) {
+            Hibernate.initialize(user.getUserProfile().getFavoriteGenres());
+        }
+        session.setAttribute(SESSION_DB_USER, user);
+        if (user.getUserProfile() == null) {
+            model.addAttribute("error", "Profile not set up yet.");
+            return "redirect:/dashboard";
+        }
+        List<String> available = Arrays.asList("Action","RPG","Strategy","Shooter","Adventure",
+                                               "Puzzle","Simulation","Sports","Racing","Fighting");
+        model.addAttribute("availableGenres", available);
+        model.addAttribute("userGenres", user.getUserProfile().getFavoriteGenres());
+        return "genre-tags";
+    } finally { hs.close(); }
+}
 
-    model.addAttribute("group", group);
-    model.addAttribute("sessions", sessions);
-    return "group-calendar";
+    // ==================== FRIEND MANAGEMENT ====================
+@PostMapping("/users/add-friend")
+public String addFriend(@RequestParam int friendUserId, HttpSession session, Model model) {
+    User currentUser = (User) session.getAttribute(SESSION_DB_USER);
+    if (currentUser == null) return "redirect:/";
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = hs.beginTransaction();
+        User me = hs.get(User.class, currentUser.getUserID());
+        User friend = hs.get(User.class, friendUserId);
+        if (friend != null && !me.getFriends().contains(friend) && me.getUserID() != friend.getUserID()) {
+            me.addFriend(friend);
+            friend.addFriend(me);
+            hs.merge(me);
+            hs.merge(friend);
+            tx.commit();
+            model.addAttribute("success", "Friend added!");
+        } else {
+            model.addAttribute("error", "Already friends or invalid user.");
+        }
+    } catch (Exception e) {
+        if (tx != null) tx.rollback();
+    } finally { hs.close(); }
+    return "redirect:/dashboard";
+}
+
+   @PostMapping("/profile/genres/add")
+public String addGenreTag(@RequestParam String genre, HttpSession session) {
+    User sessionUser = (User) session.getAttribute(SESSION_DB_USER);
+    if (sessionUser == null) return "redirect:/";
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = hs.beginTransaction();
+        User user = hs.get(User.class, sessionUser.getUserID());
+        Hibernate.initialize(user.getUserProfile());
+        if (user.getUserProfile() != null &&
+            !user.getUserProfile().getFavoriteGenres().contains(genre)) {
+            user.getUserProfile().getFavoriteGenres().add(genre);
+            hs.merge(user);
+        }
+        tx.commit();
+    } catch (Exception e) { if (tx != null) tx.rollback(); }
+    finally { hs.close(); }
+    return "redirect:/profile/genres";
+}
+
+@PostMapping("/profile/genres/remove")
+public String removeGenreTag(@RequestParam String genre, HttpSession session) {
+    User sessionUser = (User) session.getAttribute(SESSION_DB_USER);
+    if (sessionUser == null) return "redirect:/";
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = hs.beginTransaction();
+        User user = hs.get(User.class, sessionUser.getUserID());
+        Hibernate.initialize(user.getUserProfile());
+        if (user.getUserProfile() != null) {
+            user.getUserProfile().getFavoriteGenres().remove(genre);
+            hs.merge(user);
+        }
+        tx.commit();
+    } catch (Exception e) { if (tx != null) tx.rollback(); }
+    finally { hs.close(); }
+    return "redirect:/profile/genres";
+}
+
+    // ==================== GROUP CALENDAR LEGACY (FIXED null weekOffset) ====================
+@GetMapping("/groups/{groupId}/sessions")
+public String getGroupCalendarLegacy(@PathVariable int groupId, Model model) {
+    // Delegate to weekly calendar with default weekOffset=0
+    return "redirect:/groups/" + groupId + "/calendar?weekOffset=0";
 }
 
     @PostMapping("/groups/{groupId}/sessions/schedule")
@@ -388,11 +625,117 @@ public String getGroupCalendar(@PathVariable int groupId, Model model) {
         return "redirect:/groups/" + groupId + "/sessions";
     }
 
+    @GetMapping("/groups/{id}/calendar")
+public String groupCalendarWeekly(@PathVariable int id,
+                                  @RequestParam(defaultValue = "0") int weekOffset,
+                                  HttpSession session, Model model) {
+    User currentUser = (User) session.getAttribute("db_user");
+    if (currentUser == null) return "redirect:/";
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    Group group = null;
+    List<Game> scheduleGames = new ArrayList<>();
+    try {
+        group = hs.get(Group.class, id);
+        if (group == null) return "redirect:/";
+        Hibernate.initialize(group.getSessions());
+        Hibernate.initialize(group.getGames());
+        for (GroupSession gs : group.getSessions()) {
+            Hibernate.initialize(gs.getGame());
+        }
+        // Compute the shared games (same as the games page)
+        GroupOperations ops = new GroupOperations();
+        scheduleGames = ops.getSharedGames(group, sqlHandler);
+        // Optionally apply min playtime filter
+        int min = group.getMinPlaytimeRequirement();
+        if (min > 0) {
+            scheduleGames = scheduleGames.stream()
+                    .filter(g -> g.getPlaytime() >= min)
+                    .collect(Collectors.toList());
+        }
+    } finally {
+        hs.close();
+    }
+
+    // Week calculation (was missing)
+    LocalDate start = LocalDate.now().plusWeeks(weekOffset).with(DayOfWeek.MONDAY);
+    LocalDate end = start.plusDays(6);
+    List<GroupSession> weekSessions = group.getSessions().stream()
+            .filter(gs -> gs.getScheduledDate() != null &&
+                   !gs.getScheduledDate().toLocalDate().isBefore(start) &&
+                   !gs.getScheduledDate().toLocalDate().isAfter(end))
+            .collect(Collectors.toList());
+
+    model.addAttribute("schedulableGames", scheduleGames);
+    model.addAttribute("group", group);
+    model.addAttribute("currentUser", currentUser);
+    model.addAttribute("weekSessions", weekSessions);
+    model.addAttribute("startDate", start);
+    model.addAttribute("endDate", end);
+    model.addAttribute("weekOffset", weekOffset);
+    model.addAttribute("games", group.getGames());  // keep existing line
+    return "group-calendar";
+}
+
+@GetMapping("/groups/{groupId}/games/csv")
+public ResponseEntity<byte[]> exportGroupGamesCSV(@PathVariable int groupId,
+                                                  @RequestParam(defaultValue = "0") int minPlaytime,
+                                                  HttpSession session) {
+    User currentUser = (User) session.getAttribute("db_user");
+    if (currentUser == null) return ResponseEntity.status(401).build();
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    try {
+        Group group = hs.get(Group.class, groupId);
+        if (group == null) return ResponseEntity.notFound().build();
+        Hibernate.initialize(group.getMembers());
+        if (!group.getMembers().contains(currentUser)) return ResponseEntity.status(403).build();
+        GroupOperations ops = new GroupOperations();
+        List<Game> games = ops.getSharedGames(group, sqlHandler);
+        if (minPlaytime == 0) minPlaytime = group.getMinPlaytimeRequirement();
+        if (minPlaytime > 0) {
+            final int f = minPlaytime;
+            games = games.stream().filter(g -> g.getPlaytime() >= f).collect(Collectors.toList());
+        }
+        // Build CSV
+        StringBuilder csv = new StringBuilder("Game,Genre,Playtime (min)\n");
+        for (Game g : games) {
+            csv.append(escapeCsv(g.getGameName())).append(",")
+               .append(escapeCsv(g.getGenre())).append(",")
+               .append(g.getPlaytime()).append("\n");
+        }
+        byte[] bytes = csv.toString().getBytes(StandardCharsets.UTF_8);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.TEXT_PLAIN);
+        headers.setContentDispositionFormData("attachment", "group_games.csv");
+        return new ResponseEntity<>(bytes, headers, HttpStatus.OK);
+    } finally { hs.close(); }
+}
+
+private String escapeCsv(String value) {
+    if (value == null) return "";
+    if (value.contains(",") || value.contains("\"")) {
+        return "\"" + value.replace("\"", "\"\"") + "\"";
+    }
+    return value;
+}
+
+
     // ==================== EXPORT USER REPORT (3.1.32) ====================
     @GetMapping("/profile/export")
     public ResponseEntity<byte[]> exportUserReport(HttpSession session) {
-        User user = (User) session.getAttribute(SESSION_DB_USER);
-        if (user == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        User sessionUser = (User) session.getAttribute(SESSION_DB_USER);
+        if (sessionUser == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        User user = null;
+        try {
+            user = hibernateSession.get(User.class, sessionUser.getUserID());
+            if (user != null) {
+                Hibernate.initialize(user.getAchievementData());
+                for (GameAchievement ga : user.getAchievementData()) {
+                    Hibernate.initialize(ga.getGame());
+                }
+            }
+        } finally { hibernateSession.close(); }
+        if (user == null) return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         ExportCSV.ExportResult result = exportCSV.exportData(user);
         if (result.isSuccess() && result.getOutputFilePath() != null) {
             try {
@@ -409,136 +752,357 @@ public String getGroupCalendar(@PathVariable int groupId, Model model) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 
+    @GetMapping("/profile/export/chart")
+    public ResponseEntity<byte[]> exportChart(HttpSession session) {
+        User dbUser = (User) session.getAttribute("db_user");
+        if (dbUser == null) return ResponseEntity.status(401).build();
+        Session hs = HibernateUtil.getSessionFactory().openSession();
+        try {
+            User user = hs.get(User.class, dbUser.getUserID());
+            Hibernate.initialize(user.getAchievementData());
+            for (GameAchievement ga : user.getAchievementData()) Hibernate.initialize(ga.getGame());
+            byte[] png = graphService.generatePlaytimeChart(user);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.IMAGE_PNG);
+            return new ResponseEntity<>(png, headers, HttpStatus.OK);
+        } finally { hs.close(); }
+    }
+
     // ==================== ACTIVITY SUMMARIES (3.1.26, 3.1.27) ====================
     @GetMapping("/profile/activity/weekly")
-    public String getWeeklyActivity(HttpSession session, Model model) {
-        User user = (User) session.getAttribute(SESSION_DB_USER);
-        if (user == null) return "redirect:/";
+public String getWeeklyActivity(HttpSession session, Model model) {
+    User sessionUser = (User) session.getAttribute(SESSION_DB_USER);
+    if (sessionUser == null) return "redirect:/";
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    try {
+        User user = hs.get(User.class, sessionUser.getUserID());
+        Hibernate.initialize(user.getUserProfile());
+        Hibernate.initialize(user.getAchievementData());
+        for (GameAchievement ga : user.getAchievementData()) {
+            Hibernate.initialize(ga.getGame());
+        }
+        session.setAttribute(SESSION_DB_USER, user);
         model.addAttribute("summary", generateActivitySummary(user, "Weekly"));
         model.addAttribute("period", "Weekly");
         return "activity-summary";
-    }
+    } finally { hs.close(); }
+}
 
-    @GetMapping("/profile/activity/monthly")
-    public String getMonthlyActivity(HttpSession session, Model model) {
-        User user = (User) session.getAttribute(SESSION_DB_USER);
-        if (user == null) return "redirect:/";
+@GetMapping("/profile/activity/monthly")
+public String getMonthlyActivity(HttpSession session, Model model) {
+    User sessionUser = (User) session.getAttribute(SESSION_DB_USER);
+    if (sessionUser == null) return "redirect:/";
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    try {
+        User user = hs.get(User.class, sessionUser.getUserID());
+        Hibernate.initialize(user.getUserProfile());
+        Hibernate.initialize(user.getAchievementData());
+        for (GameAchievement ga : user.getAchievementData()) {
+            Hibernate.initialize(ga.getGame());
+        }
+        session.setAttribute(SESSION_DB_USER, user);
         model.addAttribute("summary", generateActivitySummary(user, "Monthly"));
         model.addAttribute("period", "Monthly");
         return "activity-summary";
-    }
+    } finally { hs.close(); }
+}
+
 
     private String generateActivitySummary(User user, String period) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("=== ").append(period.toUpperCase()).append(" ACTIVITY SUMMARY ===\n");
-        sb.append("User: ").append(user.getUserProfile().getProfileName()).append("\n");
-        sb.append("Steam ID: ").append(user.getSteamID()).append("\n");
-        int totalPlaytime = user.getAchievementData().stream()
-                .mapToInt(ga -> ga.getGame().getPlaytime())
-                .sum();
-        sb.append("Total Playtime: ").append(totalPlaytime / 60).append(" hours\n");
-        sb.append("Games Played: ").append(user.getAchievementData().size()).append("\n");
-        return sb.toString();
+    StringBuilder sb = new StringBuilder();
+    sb.append("=== ").append(period.toUpperCase()).append(" ACTIVITY SUMMARY ===\n");
+    
+    String profileName = (user.getUserProfile() != null) 
+            ? user.getUserProfile().getProfileName() 
+            : "Unknown";
+    sb.append("User: ").append(profileName).append("\n");
+    
+    sb.append("Steam ID: ").append(user.getSteamID() != null ? user.getSteamID() : "N/A").append("\n");
+    
+    Set<Game> distinctGames = new HashSet<>();
+    if (user.getAchievementData() != null) {
+        distinctGames = user.getAchievementData().stream()
+                .map(GameAchievement::getGame)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+    
+    int totalPlaytime = distinctGames.stream().mapToInt(Game::getPlaytime).sum();
+    sb.append("Total Playtime: ").append(totalPlaytime / 60).append(" hours\n");
+    sb.append("Games Played: ").append(distinctGames.size()).append("\n");
+    
+    return sb.toString();
+}
+
+    // ==================== MIN PLAYTIME REQUIREMENT (3.1.20) ====================
+    @PostMapping("/groups/{groupId}/playtime-requirement")
+    public String setMinPlaytime(@PathVariable int groupId,
+                                 @RequestParam int minPlaytimeMinutes,
+                                 HttpSession session) {
+        User currentUser = (User) session.getAttribute("db_user");
+        if (currentUser == null) return "redirect:/";
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        Transaction tx = null;
+        try {
+            tx = hibernateSession.beginTransaction();
+            Group group = hibernateSession.get(Group.class, groupId);
+            if (group != null && group.getGroupOwner().getUserID() == currentUser.getUserID()) {
+                group.setMinPlaytimeRequirement(minPlaytimeMinutes);
+                hibernateSession.merge(group);
+                tx.commit();
+            }
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+        } finally { hibernateSession.close(); }
+        return "redirect:/groups/" + groupId + "/games";
     }
 
-    // ==================== ADDITIONAL ENDPOINTS (from audit) ====================
-    @GetMapping("/groups/{id}")
-public String viewGroupRedirect(@PathVariable String id) {
-    // Skip if it's a reserved word
-    if ("create".equals(id)) {
+    // ==================== ADD MANUAL GAME (NON-STEAM) ====================
+    @GetMapping("/profile/add-game")
+    public String showAddGameForm() { return "add-game"; }
+
+    @PostMapping("/profile/add-game")
+    public String addGame(@RequestParam String gameName,
+                          @RequestParam(defaultValue = "0") int playtimeMinutes,
+                          HttpSession session) {
+        User currentUser = (User) session.getAttribute("db_user");
+        if (currentUser == null) return "redirect:/";
+        Session hs = HibernateUtil.getSessionFactory().openSession();
+        Transaction tx = null;
+        try {
+            tx = hs.beginTransaction();
+            Game game = new Game();
+            game.setGameName(gameName);
+            game.setPlaytime(playtimeMinutes);
+            hs.save(game);
+            Achievement ach = hs.createQuery("FROM Achievement WHERE achievementName = 'Manual'", Achievement.class)
+                .uniqueResult();
+            if (ach == null) {
+                ach = new Achievement("Manual", "Manually added game");
+                hs.save(ach);
+            }
+            GameAchievement ga = new GameAchievement(game, ach, currentUser);
+            hs.save(ga);
+            tx.commit();
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+        } finally { hs.close(); }
         return "redirect:/dashboard";
     }
-    return "redirect:/groups/" + id + "/games";
+
+    // ==================== GROUP PREFERENCES (FIXED tally + template name) ====================
+@GetMapping("/groups/{groupId}/preferences")
+public String listPreferences(@PathVariable int groupId, HttpSession session, Model model) {
+    User currentUser = (User) session.getAttribute("db_user");
+    if (currentUser == null) return "redirect:/";
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    try {
+        Group group = hs.get(Group.class, groupId);
+        if (group == null) return "redirect:/";
+        Hibernate.initialize(group.getMembers());
+        List<GroupPreference> prefs = hs.createQuery(
+            "FROM GroupPreference gp WHERE gp.group.groupID = :gid", GroupPreference.class)
+            .setParameter("gid", groupId)
+            .list();
+        
+        Map<Integer, Long[]> prefVoteCounts = new HashMap<>();
+        for (GroupPreference gp : prefs) {
+            Hibernate.initialize(gp.getVotes());
+            long yesCount = gp.getVotes().stream().filter(v -> v.isApproved()).count();
+            long noCount = gp.getVotes().stream().filter(v -> !v.isApproved()).count();
+            prefVoteCounts.put(gp.getPreferenceId(), new Long[]{yesCount, noCount});
+        }
+        
+        model.addAttribute("group", group);
+        model.addAttribute("currentUser", currentUser);
+        model.addAttribute("preferences", prefs);
+        model.addAttribute("prefVoteCounts", prefVoteCounts);
+        return "group-preference";
+    } finally { hs.close(); }
 }
+
+    @PostMapping("/groups/{groupId}/preferences/create")
+    public String createPreference(@PathVariable int groupId,
+                                   @RequestParam String preferenceName,
+                                   HttpSession session) {
+        User currentUser = (User) session.getAttribute("db_user");
+        if (currentUser == null) return "redirect:/";
+        Group group = sqlHandler.getGroupById(groupId);
+        if (group == null || group.getGroupOwner().getUserID() != currentUser.getUserID())
+            return "redirect:/";
+        GroupPreference gp = new GroupPreference(group, preferenceName);
+        sqlHandler.createGroupPreference(gp);
+        return "redirect:/groups/" + groupId + "/preferences";
+    }
+
+    @PostMapping("/groups/{groupId}/preferences/{prefId}/vote")
+    public String voteOnPreference(@PathVariable int groupId,
+                                   @PathVariable int prefId,
+                                   @RequestParam boolean approved,
+                                   HttpSession session) {
+        User currentUser = (User) session.getAttribute("db_user");
+        if (currentUser == null) return "redirect:/";
+        GroupPreference pref = sqlHandler.getGroupPreferenceById(prefId);
+        if (pref == null || pref.isVotingClosed()) return "redirect:/groups/" + groupId + "/preferences";
+        GroupPreferenceVote vote = new GroupPreferenceVote(pref, currentUser, approved);
+        sqlHandler.createGroupPreferenceVote(vote);
+        return "redirect:/groups/" + groupId + "/preferences";
+    }
+
+    @PostMapping("/groups/{groupId}/preferences/{prefId}/decide")
+    public String decidePreference(@PathVariable int groupId,
+                                   @PathVariable int prefId,
+                                   HttpSession session) {
+        User currentUser = (User) session.getAttribute("db_user");
+        if (currentUser == null) return "redirect:/";
+        GroupPreference pref = sqlHandler.getGroupPreferenceById(prefId);
+        if (pref == null || pref.getGroup().getGroupOwner().getUserID() != currentUser.getUserID())
+            return "redirect:/";
+        pref.setVotingClosed(true);
+        sqlHandler.updateGroupPreference(pref);
+        return "redirect:/groups/" + groupId + "/preferences";
+    }
+
+    // ==================== SHARABLE GAME LIST (FIXED) ====================
+@ResponseBody
+public String shareGameList(@PathVariable int groupId, HttpSession session) {
+    User currentUser = (User) session.getAttribute("db_user");
+    if (currentUser == null) return "Unauthorized";
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    try {
+        Group group = hs.get(Group.class, groupId);
+        if (group == null) return "Group not found";
+        Hibernate.initialize(group.getMembers());
+        boolean isMember = group.getMembers().stream()
+                .anyMatch(m -> m.getUserID() == currentUser.getUserID());
+        if (!isMember) return "Unauthorized";
+        String token = UUID.randomUUID().toString().substring(0, 8);
+        group.setShareToken(token);
+        hs.beginTransaction();
+        hs.merge(group);
+        hs.getTransaction().commit();
+        return "/groups/shared/" + token;
+    } finally { hs.close(); }
+}
+
+    @GetMapping("/groups/shared/{token}")
+    public String viewSharedGames(@PathVariable String token, Model model) {
+        Session hs = HibernateUtil.getSessionFactory().openSession();
+        try {
+            Group group = hs.createQuery("FROM Group WHERE shareToken = :token", Group.class)
+                .setParameter("token", token)
+                .uniqueResult();
+            if (group == null) return "redirect:/";
+            Hibernate.initialize(group.getGames());
+            model.addAttribute("group", group);
+            model.addAttribute("games", group.getGames());
+            return "shared-games";
+        } finally { hs.close(); }
+    }
+
+    // ==================== ADDITIONAL ENDPOINTS ====================
+    @GetMapping("/groups/{id}")
+    public String viewGroupRedirect(@PathVariable String id) {
+        if ("create".equals(id)) return "redirect:/dashboard";
+        return "redirect:/groups/" + id + "/games";
+    }
 
     @PostMapping("/groups/{groupId}/delete")
 public String deleteGroup(@PathVariable int groupId, HttpSession session) {
     User currentUser = (User) session.getAttribute(SESSION_DB_USER);
     if (currentUser == null) return "redirect:/";
-
-    Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
-    Transaction tx = null;
-    try {
-        tx = hibernateSession.beginTransaction();
-        Group group = hibernateSession.get(Group.class, groupId);
-        if (group != null && group.getGroupOwner().getUserID() == currentUser.getUserID()) {
-            hibernateSession.remove(group);
-            tx.commit();
-        }
-    } catch (Exception e) {
-        if (tx != null) tx.rollback();
-    } finally {
-        hibernateSession.close();
+    Group group = sqlHandler.getGroupById(groupId);
+    if (group != null && group.getGroupOwner().getUserID() == currentUser.getUserID()) {
+        sqlHandler.deleteGroupAndDependencies(group);
     }
     return "redirect:/dashboard";
 }
 
-    @PostMapping("/groups/{groupId}/transfer-ownership")
-public String transferOwnership(@PathVariable int groupId, @RequestParam int newOwnerId, HttpSession session) {
-    User currentUser = (User) session.getAttribute(SESSION_DB_USER);
-    if (currentUser == null) return "redirect:/";
 
-    Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
-    Transaction tx = null;
-    try {
-        tx = hibernateSession.beginTransaction();
-        Group group = hibernateSession.get(Group.class, groupId);
-        if (group != null && group.getGroupOwner().getUserID() == currentUser.getUserID()) {
-            Hibernate.initialize(group.getMembers());
-            User newOwner = hibernateSession.get(User.class, newOwnerId);
-            if (newOwner != null && group.getMembers().contains(newOwner)) {
-                group.setGroupOwner(newOwner);
-                hibernateSession.merge(group);
-                tx.commit();
+    @PostMapping("/groups/{groupId}/transfer-ownership")
+    public String transferOwnership(@PathVariable int groupId, @RequestParam int newOwnerId, HttpSession session) {
+        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
+        if (currentUser == null) return "redirect:/";
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        Transaction tx = null;
+        try {
+            tx = hibernateSession.beginTransaction();
+            Group group = hibernateSession.get(Group.class, groupId);
+            if (group != null && group.getGroupOwner().getUserID() == currentUser.getUserID()) {
+                Hibernate.initialize(group.getMembers());
+                User newOwner = hibernateSession.get(User.class, newOwnerId);
+                if (newOwner != null && group.getMembers().contains(newOwner)) {
+                    group.setGroupOwner(newOwner);
+                    hibernateSession.merge(group);
+                    tx.commit();
+                }
             }
-        }
-    } catch (Exception e) {
-        if (tx != null) tx.rollback();
-    } finally {
-        hibernateSession.close();
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+        } finally { hibernateSession.close(); }
+        return "redirect:/groups/" + groupId + "/members";
     }
-    return "redirect:/groups/" + groupId + "/members";
+
+    @PostMapping("/groups/{groupId}/preferences/{prefId}/delete")
+public String deletePreference(@PathVariable int groupId, @PathVariable int prefId, HttpSession session) {
+    User currentUser = (User) session.getAttribute("db_user");
+    GroupPreference pref = sqlHandler.getGroupPreferenceById(prefId);
+    if (pref != null && pref.getGroup().getGroupOwner().getUserID() == currentUser.getUserID()) {
+        sqlHandler.deleteGroupPreference(pref);
+    }
+    return "redirect:/groups/" + groupId + "/preferences";
 }
 
     @PostMapping("/groups/{groupId}/members/{userId}/remove")
-public String removeMember(@PathVariable int groupId, @PathVariable int userId, HttpSession session) {
+    public String removeMember(@PathVariable int groupId, @PathVariable int userId, HttpSession session) {
+        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
+        if (currentUser == null) return "redirect:/";
+        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+        Transaction tx = null;
+        try {
+            tx = hibernateSession.beginTransaction();
+            Group group = hibernateSession.get(Group.class, groupId);
+            if (group != null && group.getGroupOwner().getUserID() == currentUser.getUserID()) {
+                Hibernate.initialize(group.getMembers());
+                User toRemove = group.getMembers().stream()
+                        .filter(u -> u.getUserID() == userId)
+                        .findFirst().orElse(null);
+                if (toRemove != null) {
+                    group.removeGroupMember(toRemove);
+                    hibernateSession.merge(group);
+                    tx.commit();
+                }
+            }
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+        } finally { hibernateSession.close(); }
+        return "redirect:/groups/" + groupId + "/members";
+    }
+
+    // ==================== RANDOMIZE (FIXED) ====================
+@GetMapping("/groups/{id}/randomize")
+public String randomizeGameList(@PathVariable int id, HttpSession session) {
     User currentUser = (User) session.getAttribute(SESSION_DB_USER);
     if (currentUser == null) return "redirect:/";
-
-    Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
+    Session hs = HibernateUtil.getSessionFactory().openSession();
     Transaction tx = null;
     try {
-        tx = hibernateSession.beginTransaction();
-        Group group = hibernateSession.get(Group.class, groupId);
-        if (group != null && group.getGroupOwner().getUserID() == currentUser.getUserID()) {
-            Hibernate.initialize(group.getMembers());
-            User toRemove = group.getMembers().stream()
-                    .filter(u -> u.getUserID() == userId)
-                    .findFirst().orElse(null);
-            if (toRemove != null) {
-                group.removeGroupMember(toRemove);
-                hibernateSession.merge(group);
-                tx.commit();
-            }
-        }
-    } catch (Exception e) {
-        if (tx != null) tx.rollback();
-    } finally {
-        hibernateSession.close();
-    }
-    return "redirect:/groups/" + groupId + "/members";
-}
-
-    @GetMapping("/groups/{id}/randomize")
-    public String randomizeGameList(@PathVariable int id, HttpSession session) {
-        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
-        Group group = sqlHandler.getGroupById(id);
-        if (group == null || !group.getMembers().contains(currentUser)) return "redirect:/";
+        tx = hs.beginTransaction();
+        Group group = hs.get(Group.class, id);
+        if (group == null) { tx.commit(); return "redirect:/"; }
+        Hibernate.initialize(group.getMembers());
+        boolean isMember = group.getMembers().stream()
+                .anyMatch(m -> m.getUserID() == currentUser.getUserID());
+        if (!isMember) { tx.commit(); return "redirect:/dashboard"; }
         GroupOperations ops = new GroupOperations();
         group.setGames(ops.randomizeGameList(group.getGames()));
-        sqlHandler.updateGroup(group);
-        return "redirect:/groups/" + id + "/games";
-    }
+        hs.merge(group);
+        tx.commit();
+    } catch (Exception e) {
+        if (tx != null) tx.rollback();
+    } finally { hs.close(); }
+    return "redirect:/groups/" + id + "/games";
+}
 
     @PostMapping("/profile/delete")
     public String deleteUserAccount(HttpSession session) {
@@ -561,5 +1125,12 @@ public String removeMember(@PathVariable int groupId, @PathVariable int userId, 
         GroupJoinRequest req = new GroupJoinRequest(group, null, token);
         sqlHandler.createGroupJoinRequest(req);
         return "/groups/join/" + token;
+    }
+
+    @GetMapping("/groups")
+    public String listGroups(HttpSession session, Model model) {
+        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
+        if (currentUser == null) return "redirect:/";
+        return "redirect:/dashboard";
     }
 }

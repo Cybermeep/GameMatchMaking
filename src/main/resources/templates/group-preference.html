@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Group Tags</title>
+    <style>
+        body {
+            font-family: 'Segoe UI',sans-serif;
+            background: #1b2838;
+            color: #c6d4df;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #66c0f4;
+        }
+
+        .btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            text-decoration: none;
+            border: 1px solid #66c0f4;
+            color: #66c0f4;
+            margin: 0 5px;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #66c0f4;
+            color: #111;
+            border: none;
+        }
+
+        .sub-nav {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .pref-card {
+            background: #16202d;
+            border: 1px solid rgba(102,192,244,0.1);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        a {
+            color: #66c0f4;
+        }
+
+        .form-input {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(102,192,244,0.2);
+            border-radius: 6px;
+            padding: 8px;
+            color: #c6d4df;
+        }
+    </style>
+</head>
+<body>
+    <a href="/dashboard" style="color:#66c0f4;">🔙 Back to Dashboard</a>
+    <div class="sub-nav">
+        <a th:href="@{/groups/{id}/games(id=${group.groupID})}" class="btn">Games</a>
+        <a th:href="@{/groups/{id}/members(id=${group.groupID})}" class="btn">Members</a>
+        <a th:href="@{/groups/{id}/preferences(id=${group.groupID})}" class="btn btn-primary">Tags</a>
+        <a th:href="@{/groups/{id}/home(id=${group.groupID})}" class="btn">Home</a>
+    </div>
+    <h1 th:text="'Tags for ' + ${group.groupName}">Tags</h1>
+
+    <!-- Owner can add new tag -->
+    <div th:if="${currentUser.userID == group.groupOwner.userID}" style="margin-bottom:20px;">
+        <form th:action="@{/groups/{id}/preferences/create(id=${group.groupID})}" method="post" style="display:flex; gap:8px;">
+            <input type="text" name="preferenceName" placeholder="New tag..." class="form-input" required>
+            <button type="submit" class="btn-primary">Add Tag</button>
+        </form>
+    </div>
+
+    <ul style="list-style:none; padding:0;">
+        <li th:each="pref : ${preferences}" class="pref-card">
+            <strong th:text="${pref.preferenceName}"></strong>
+            <form th:if="${currentUser.userID == group.groupOwner.userID}"
+                  th:action="@{/groups/{id}/preferences/{pid}/delete(id=${group.groupID}, pid=${pref.preferenceId})}"
+                  method="post" style="display:inline;">
+                <button type="submit" class="btn" style="color:#ff8888;border-color:#ff4444;">Delete</button>
+            </form>
+        </li>
+    </ul>
+</body>
+</html>

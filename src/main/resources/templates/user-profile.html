@@ -3,7 +3,8 @@
 <head>
     <title th:text="${viewedUser.userProfile.profileName} + ' Profile'">Profile</title>
 </head>
-<body>
+<body style="background:#1b2838; color:#c6d4df; padding:20px;">
+    <a href="/dashboard" style="color:#66c0f4;"> Back to Dashboard</a>
     <h1 th:text="${viewedUser.userProfile.profileName}"></h1>
     <p>Steam ID: <span th:text="${viewedUser.steamID}"></span></p>
     <h2>Games & Achievements</h2>
@@ -16,5 +17,11 @@
             <li th:each="friend : ${mutualFriends}" th:text="${friend.userProfile.profileName}"></li>
         </ul>
     </div>
+    <!-- Add Friend button (visible if logged in, not the same user, and not already friends) -->
+    <form th:if="${currentUser != null and currentUser.userID != viewedUser.userID and !currentUser.friends.contains(viewedUser)}"
+          th:action="@{/users/add-friend}" method="post" style="margin-top:10px;">
+        <input type="hidden" name="friendUserId" th:value="${viewedUser.userID}">
+        <button type="submit" class="btn-outline" style="color:#66c0f4; border:1px solid #66c0f4;">+ Add Friend</button>
+    </form>
 </body>
 </html>

@@ -1,21 +1,177 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><title>Group Members</title></head>
+<head>
+    <meta charset="UTF-8">
+    <title>Group Members</title>
+    <style>
+        /* … all existing styles unchanged … */
+        body {
+            font-family: 'Segoe UI',sans-serif;
+            background: #1b2838;
+            color: #c6d4df;
+            padding: 20px
+        }
+
+        h1 {
+            color: #66c0f4
+        }
+
+        ul {
+            list-style: none;
+            padding: 0
+        }
+
+        li {
+            background: #16202d;
+            border: 1px solid rgba(102,192,244,0.1);
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #66c0f4;
+            border: 1px solid #66c0f4;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            text-decoration: none
+        }
+
+            .btn-outline:hover {
+                background: rgba(102,192,244,0.1)
+            }
+
+        .btn-primary {
+            background: #66c0f4;
+            color: #111920;
+            padding: 7px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none
+        }
+
+            .btn-primary:hover {
+                opacity: 0.85
+            }
+
+        .btn-danger {
+            background: #ff4444;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer
+        }
+
+        .sub-nav {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        .invite-section {
+            margin-bottom: 20px
+        }
+
+        #inviteLink a {
+            color: #66c0f4
+        }
+
+        .member-actions {
+            display: flex;
+            gap: 6px
+        }
+
+        .online-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px
+        }
+
+        .green {
+            background: #4caf50
+        }
+
+        .red {
+            background: #f44336
+        }
+    </style>
+</head>
 <body>
+    <div class="sub-nav">
+        <a th:href="@{/groups/{id}/games(id=${group.groupID})}" class="btn-outline"> Games</a>
+        <a th:href="@{/groups/{id}/members(id=${group.groupID})}" class="btn-outline" style="color:white;background:#66c0f4;border-color:#66c0f4;"> Members</a>
+        <a th:href="@{/groups/{id}/sessions(id=${group.groupID})}" class="btn-outline"> Sessions</a>
+        <a th:href="@{/groups/{id}/achievements(id=${group.groupID})}" class="btn-outline"> Achievements</a>
+        <a th:href="@{/groups/{id}/vote(id=${group.groupID})}" class="btn-outline">Vote</a>
+        <a th:href="@{/groups/{id}/preferences(id=${group.groupID})}" class="btn-outline"> Prefs</a>
+        <a th:href="@{/groups/{id}/home(id=${group.groupID})}" class="btn-outline"> Home</a>
+    </div>
+
     <h1 th:text="'Members of ' + ${group.groupName}">Members</h1>
+
+    <div th:if="${group.groupOwner.userID == currentUser.userID}" class="invite-section">
+        <button onclick="generateInvite()" class="btn-outline"> Generate Invite Link</button>
+        <span id="inviteLink" style="margin-left:10px;"></span>
+    </div>
+
     <ul>
-        <li th:each="member : ${members}" th:text="${member.userProfile.profileName}"></li>
+        <li th:each="member : ${members}">
+            <span style="display:flex; align-items:center;">
+                <span th:class="'online-dot ' + (${member.online} ? 'green' : 'red')"></span>
+                <span th:text="${member.userProfile.profileName}">User</span>
+            </span>
+            <div class="member-actions">
+                <form th:if="${group.groupOwner.userID == currentUser.userID and member.userID != currentUser.userID}"
+                      th:action="@{/groups/{id}/transfer-ownership(id=${group.groupID})}" method="post" style="display:inline"
+                      onsubmit="return confirm('Transfer ownership to ' + '[[${member.userProfile.profileName}]]' + '?');">
+                    <input type="hidden" name="newOwnerId" th:value="${member.userID}">
+                    <button type="submit" class="btn-outline">Make Owner</button>
+                </form>
+                <form th:if="${group.groupOwner.userID == currentUser.userID and member.userID != currentUser.userID}"
+                      th:action="@{/groups/{gid}/members/{uid}/remove(gid=${group.groupID},uid=${member.userID})}"
+                      method="post" style="display:inline">
+                    <button type="submit" class="btn-outline" style="color:#ff8888;border-color:#ff4444;">Remove</button>
+                </form>
+            </div>
+        </li>
     </ul>
-    <!-- Owner can remove a member (requires endpoint) -->
-    <div th:if="${group.groupOwner.userID == currentUser.userID}">
-        <h3>Remove Member</h3>
-        <form th:action="@{/groups/{id}/members/remove(id=${group.groupID})}" method="post">
-            <input type="number" name="userId" placeholder="User ID">
-            <button type="submit">Remove</button>
+
+    <div th:if="${group.groupOwner.userID == currentUser.userID}" style="margin-top:20px; display:flex; gap:10px;">
+        <form th:action="@{/groups/{id}/delete(id=${group.groupID})}" method="post"
+              onsubmit="return confirm('Delete group &quot;' + '[[${group.groupName}]]' + '&quot;?');">
+            <button type="submit" class="btn-danger"> Delete Group</button>
         </form>
     </div>
-    <form th:action="@{/groups/{id}/leave(id=${group.groupID})}" method="post">
-        <button type="submit">Leave Group</button>
+
+    <form th:action="@{/groups/{id}/leave(id=${group.groupID})}" method="post" style="margin-top:10px;"
+          onsubmit="return confirm('Leave this group?');">
+        <button type="submit" class="btn-outline" style="border-color:#ffaaaa;color:#ffaaaa;">Leave Group</button>
     </form>
+
+    <script th:inline="javascript">
+        var groupId = /*[[${group.groupID}]]*/ 0;
+        function generateInvite() {
+            fetch('/groups/' + groupId + '/generate-invite')
+                .then(r => r.text())
+                .then(path => {
+                    document.getElementById('inviteLink').innerHTML =
+                        'Invite: <a href="' + path + '">' + window.location.origin + path + '</a>';
+                });
+        }
+    </script>
 </body>
 </html>

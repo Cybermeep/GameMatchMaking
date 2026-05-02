@@ -1021,6 +1021,18 @@ public User getUserBySteamId(String steamId) {
     }
 }
 
+public boolean deleteGroupPreference(GroupPreference pref) {
+    Session session = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = session.beginTransaction();
+        session.remove(session.merge(pref));
+        tx.commit();
+        return true;
+    } catch (Exception e) { if (tx != null) tx.rollback(); return false; }
+    finally { session.close(); }
+}
+
 public GroupJoinRequest getGroupJoinRequestById(int requestId) {
     Session session = HibernateUtil.getSessionFactory().openSession();
     try {
@@ -1031,6 +1043,107 @@ public GroupJoinRequest getGroupJoinRequestById(int requestId) {
     } finally {
         session.close();
     }
+
+
 }
+
+public boolean deleteGroupAndDependencies(Group group) {
+    Session session = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = session.beginTransaction();
+        // Reattach group
+        Group g = session.get(Group.class, group.getGroupID());
+        // Delete all child records manually
+        session.createQuery("DELETE FROM GroupPreferenceVote WHERE groupPreference.preferenceId IN " +
+                "(SELECT gp.preferenceId FROM GroupPreference gp WHERE gp.group.groupID = :gid)")
+                .setParameter("gid", g.getGroupID()).executeUpdate();
+        session.createQuery("DELETE FROM GroupPreference WHERE group.groupID = :gid")
+                .setParameter("gid", g.getGroupID()).executeUpdate();
+        session.createQuery("DELETE FROM GroupVote WHERE group.groupID = :gid")
+                .setParameter("gid", g.getGroupID()).executeUpdate();
+        session.createQuery("DELETE FROM GroupJoinRequest WHERE group.groupID = :gid")
+                .setParameter("gid", g.getGroupID()).executeUpdate();
+        session.createQuery("DELETE FROM GroupSession WHERE group.groupID = :gid")
+                .setParameter("gid", g.getGroupID()).executeUpdate();
+        // Clear many-to-many associations
+        g.getMembers().clear();
+        g.getGames().clear();
+        session.flush();  // Synchronize the clears to remove join table rows
+        // Now delete the group itself
+        session.remove(g);
+        tx.commit();
+        return true;
+    } catch (Exception e) {
+        if (tx != null) tx.rollback();
+        e.printStackTrace();
+        return false;
+    } finally { session.close(); }
+}
+
+// ==================== GROUP PREFERENCE OPERATIONS ====================
+public boolean createGroupPreference(GroupPreference pref) {
+    Session session = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = session.beginTransaction();
+        session.persist(pref);
+        tx.commit();
+        return true;
+    } catch (Exception e) {
+        if (tx != null) tx.rollback();
+        return false;
+    } finally { session.close(); }
+}
+
+public GroupPreference getGroupPreferenceById(int id) {
+    Session session = HibernateUtil.getSessionFactory().openSession();
+    try { return session.get(GroupPreference.class, id); }
+    finally { session.close(); }
+}
+
+public boolean updateGroupPreference(GroupPreference pref) {
+    Session session = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = session.beginTransaction();
+        session.merge(pref);
+        tx.commit();
+        return true;
+    } catch (Exception e) {
+        if (tx != null) tx.rollback();
+        return false;
+    } finally { session.close(); }
+}
+
+public boolean createGroupPreferenceVote(GroupPreferenceVote vote) {
+    Session session = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = session.beginTransaction();
+        session.persist(vote);
+        tx.commit();
+        return true;
+    } catch (Exception e) {
+        if (tx != null) tx.rollback();
+        return false;
+    } finally { session.close(); }
+}
+
+    // ==================== LOCAL USER SEARCH ====================
+    public User searchUserByLocalUsername(String username) {
+        Session session = HibernateUtil.getSessionFactory().openSession();
+        try {
+            Query<User> query = session.createQuery(
+                "FROM User WHERE localUsername = :uname", User.class);
+            query.setParameter("uname", username);
+            return query.uniqueResult();
+        } catch (Exception e) {
+            System.err.println("SQLHandler: Error searching by local username - " + e.getMessage());
+            return null;
+        } finally {
+            session.close();
+        }
+    }
 
 }
