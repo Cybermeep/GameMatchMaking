@@ -11,19 +11,28 @@ public class HibernateUtil {
         try {
             Configuration cfg = new Configuration();
 
-
-            String jdbcUrl = System.getenv("JDBC_DATABASE_URL");
+            // Allow full override via system properties, fallback to env vars
+            String jdbcUrl = System.getProperty("hibernate.connection.url",
+                    System.getenv("JDBC_DATABASE_URL"));
             if (jdbcUrl == null || jdbcUrl.isEmpty()) {
                 jdbcUrl = "jdbc:oracle:thin:@localhost:1521/XEPDB1";
             }
-            String username = System.getenv("ORACLE_USERNAME");
-            String password = System.getenv("ORACLE_PASSWORD");
 
-            cfg.setProperty("hibernate.connection.driver_class", "oracle.jdbc.OracleDriver");
+            String username = System.getProperty("hibernate.connection.username",
+                    System.getenv("ORACLE_USERNAME"));
+            String password = System.getProperty("hibernate.connection.password",
+                    System.getenv("ORACLE_PASSWORD"));
+
+            String driver = System.getProperty("hibernate.connection.driver_class",
+                    "oracle.jdbc.OracleDriver");
+            String dialect = System.getProperty("hibernate.dialect",
+                    "org.hibernate.dialect.Oracle12cDialect");
+
+            cfg.setProperty("hibernate.connection.driver_class", driver);
             cfg.setProperty("hibernate.connection.url", jdbcUrl);
             cfg.setProperty("hibernate.connection.username", username);
             cfg.setProperty("hibernate.connection.password", password);
-            cfg.setProperty("hibernate.dialect", "org.hibernate.dialect.Oracle12cDialect");
+            cfg.setProperty("hibernate.dialect", dialect);
             cfg.setProperty("hibernate.hbm2ddl.auto", "update");
             cfg.setProperty("hibernate.show_sql", "false");
 

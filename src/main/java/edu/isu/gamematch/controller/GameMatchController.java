@@ -68,9 +68,10 @@ public class GameMatchController {
     }
 
     // ==================== GROUP GAMES (3.1.3, 3.1.20) ====================
-    @GetMapping("/groups/{groupId}/games")
+   @GetMapping("/groups/{groupId}/games")
 public String getFilteredGames(@PathVariable int groupId,
                                @RequestParam(defaultValue = "0") int minPlaytime,
+                               @RequestParam(defaultValue = "false") boolean random,
                                HttpSession session, Model model) {
     User currentUser = (User) session.getAttribute("db_user");
     if (currentUser == null) return "redirect:/";
@@ -88,37 +89,58 @@ public String getFilteredGames(@PathVariable int groupId,
             hibernateSession.close();
             return "redirect:/dashboard";
         }
-        GroupOperations ops = new GroupOperations();
-        sharedGames = ops.getSharedGames(group, sqlHandler);
 
-        // Use stored requirement if no explicit query parameter
-        int effectiveMinPlaytime = minPlaytime;
-        if (effectiveMinPlaytime == 0 && group.getMinPlaytimeRequirement() > 0) {
-            effectiveMinPlaytime = group.getMinPlaytimeRequirement();
+        // Reload current user within this session and initialize profile + genres
+        User freshUser = hibernateSession.get(User.class, currentUser.getUserID());
+        Hibernate.initialize(freshUser.getUserProfile());
+        if (freshUser.getUserProfile() != null) {
+            Hibernate.initialize(freshUser.getUserProfile().getFavoriteGenres());
         }
-        if (effectiveMinPlaytime > 0) {
-            final int filterMinutes = effectiveMinPlaytime;
-            sharedGames = sharedGames.stream()
-                    .filter(g -> g.getPlaytime() >= filterMinutes)
-                    .collect(Collectors.toList());
-        }
-        ops.rankList(group, currentUser, sqlHandler);
 
-        // Fetch group tags (preferences) for genre assignment
+        if (random) {
+            Hibernate.initialize(group.getGames());
+            sharedGames = new ArrayList<>(group.getGames());
+        } else {
+            GroupOperations ops = new GroupOperations();
+            sharedGames = ops.getSharedGames(group, sqlHandler);
+
+            int effectiveMinPlaytime = minPlaytime;
+            if (effectiveMinPlaytime == 0 && group.getMinPlaytimeRequirement() > 0) {
+                effectiveMinPlaytime = group.getMinPlaytimeRequirement();
+            }
+            if (effectiveMinPlaytime > 0) {
+                final int filterMinutes = effectiveMinPlaytime;
+                sharedGames = sharedGames.stream()
+                        .filter(g -> g.getPlaytime() >= filterMinutes)
+                        .collect(Collectors.toList());
+            }
+            // Use the fresh user (with loaded profile) for ranking
+            ops.rankList(group, freshUser, sqlHandler);
+        }
+
+        // Remove any null entries
+        sharedGames = sharedGames.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        // Fetch group tags for genre assignment
         groupTags = hibernateSession.createQuery(
             "FROM GroupPreference WHERE group.groupID = :gid", GroupPreference.class)
             .setParameter("gid", groupId)
             .list();
+
     } finally {
         hibernateSession.close();
     }
+
     model.addAttribute("group", group);
     model.addAttribute("games", sharedGames);
     model.addAttribute("minPlaytime", minPlaytime);
-    model.addAttribute("currentUser", currentUser);
+    model.addAttribute("currentUser", currentUser);   // the session user is fine for rendering privileges
     model.addAttribute("groupTags", groupTags);
     return "group-games";
 }
+
 
 @PostMapping("/groups/{groupId}/update-game-genre")
 public String updateGameGenre(@PathVariable int groupId,
@@ -134,14 +156,58 @@ public String updateGameGenre(@PathVariable int groupId,
         Group group = hs.get(Group.class, groupId);
         if (group == null) { tx.commit(); return "redirect:/dashboard"; }
         Hibernate.initialize(group.getMembers());
-        // Compare by userID
-        boolean isMember = group.getMembers().stream()
-                .anyMatch(m -> m.getUserID() == currentUser.getUserID());
+        boolean isMember = group.getMembers().stream().anyMatch(m -> m.getUserID() == currentUser.getUserID());
         if (!isMember) { tx.commit(); return "redirect:/dashboard"; }
+
         Game game = hs.get(Game.class, gameId);
         if (game != null) {
-            game.setGenre(genre);
+            // Append the tag if not already present (comma separated)
+            String currentGenre = game.getGenre();
+            if (currentGenre == null || currentGenre.trim().isEmpty()) {
+                game.setGenre(genre);
+            } else {
+                List<String> tags = new ArrayList<>(Arrays.asList(currentGenre.split("\\s*,\\s*")));
+                if (!tags.contains(genre)) {
+                    tags.add(genre);
+                    game.setGenre(String.join(", ", tags));
+                }
+            }
+            game.setGenre(game.getGenre().trim()); // remove accidental spaces
             hs.merge(game);
+        }
+        tx.commit();
+    } catch (Exception e) {
+        if (tx != null) tx.rollback();
+    } finally { hs.close(); }
+    return "redirect:/groups/" + groupId + "/games";
+}
+
+// New: remove a single tag from a game's genre
+@PostMapping("/groups/{groupId}/remove-game-genre")
+public String removeGameGenre(@PathVariable int groupId,
+                              @RequestParam int gameId,
+                              @RequestParam String genre,
+                              HttpSession session) {
+    // Similar permission check as above
+    User currentUser = (User) session.getAttribute("db_user");
+    if (currentUser == null) return "redirect:/";
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = hs.beginTransaction();
+        Group group = hs.get(Group.class, groupId);
+        if (group == null) { tx.commit(); return "redirect:/dashboard"; }
+        Hibernate.initialize(group.getMembers());
+        boolean isMember = group.getMembers().stream().anyMatch(m -> m.getUserID() == currentUser.getUserID());
+        if (!isMember) { tx.commit(); return "redirect:/dashboard"; }
+
+        Game game = hs.get(Game.class, gameId);
+        if (game != null && game.getGenre() != null) {
+            List<String> tags = new ArrayList<>(Arrays.asList(game.getGenre().split("\\s*,\\s*")));
+            if (tags.remove(genre)) {
+                game.setGenre(tags.isEmpty() ? "" : String.join(", ", tags));
+                hs.merge(game);
+            }
         }
         tx.commit();
     } catch (Exception e) {
@@ -183,12 +249,13 @@ public String joinGroupViaInvite(@PathVariable String inviteToken, HttpSession s
     Transaction tx = null;
     try {
         tx = hs.beginTransaction();
-        GroupJoinRequest joinReq = (GroupJoinRequest) hs.createQuery(
-            "FROM GroupJoinRequest WHERE inviteToken = :token AND status = 'PENDING'", GroupJoinRequest.class)
+        GroupJoinRequest joinReq = hs.createQuery(
+            "FROM GroupJoinRequest WHERE inviteToken = :token AND status = 'PENDING'",
+            GroupJoinRequest.class)
             .setParameter("token", inviteToken)
             .uniqueResult();
         if (joinReq == null) {
-            tx.commit(); // finish empty trans
+            tx.commit();
             model.addAttribute("error", "Invalid or expired invite link.");
             return "redirect:/dashboard";
         }
@@ -198,7 +265,13 @@ public String joinGroupViaInvite(@PathVariable String inviteToken, HttpSession s
             model.addAttribute("error", "Group no longer exists.");
             return "redirect:/dashboard";
         }
+        // Get the attached user inside the same Hibernate session
         User attachedUser = hs.get(User.class, currentUser.getUserID());
+        if (attachedUser == null) {
+            tx.commit();
+            model.addAttribute("error", "User not found.");
+            return "redirect:/dashboard";
+        }
         if (group.getMembers().contains(attachedUser)) {
             tx.commit();
             model.addAttribute("error", "You are already a member.");
@@ -218,18 +291,51 @@ public String joinGroupViaInvite(@PathVariable String inviteToken, HttpSession s
     return "redirect:/dashboard";
 }
 
+@PostMapping("/groups/join")
+public String joinGroupWithToken(@RequestParam String token, HttpSession session, Model model) {
+    // If the user pastes the full invite URL, extract the actual token
+    String cleanToken = token.trim();
+    if (cleanToken.startsWith("http://") || cleanToken.startsWith("https://")) {
+        int lastSlash = cleanToken.lastIndexOf('/');
+        if (lastSlash >= 0 && lastSlash < cleanToken.length() - 1) {
+            cleanToken = cleanToken.substring(lastSlash + 1);
+        }
+        // Also remove any query parameters
+        int queryStart = cleanToken.indexOf('?');
+        if (queryStart >= 0) cleanToken = cleanToken.substring(0, queryStart);
+    }
+
+    // Redirect to the existing logic that processes the token
+    return "redirect:/groups/join/" + cleanToken;
+}
+
     // ==================== LEAVE GROUP (3.1.10) ====================
     @PostMapping("/groups/{groupId}/leave")
-    public String leaveGroup(@PathVariable int groupId, HttpSession session) {
-        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
-        if (currentUser == null) return "redirect:/";
-        Group group = sqlHandler.getGroupById(groupId);
-        if (group != null && group.getMembers().contains(currentUser)) {
-            group.removeGroupMember(currentUser);
-            sqlHandler.updateGroup(group);
+public String leaveGroup(@PathVariable int groupId, HttpSession session) {
+    User currentUser = (User) session.getAttribute(SESSION_DB_USER);
+    if (currentUser == null) return "redirect:/";
+
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = hs.beginTransaction();
+        Group group = hs.get(Group.class, groupId);
+        if (group == null) {
+            tx.commit();
+            return "redirect:/dashboard";
         }
-        return "redirect:/dashboard";
+        Hibernate.initialize(group.getMembers());
+        if (group.getMembers().removeIf(m -> m.getUserID() == currentUser.getUserID())) {
+            hs.merge(group);
+        }
+        tx.commit();
+    } catch (Exception e) {
+        if (tx != null) tx.rollback();
+    } finally {
+        hs.close();
     }
+    return "redirect:/dashboard";
+}
 
     private UserProfile getProfileOrNull(User user) {
     if (user.getUserProfile() == null) return null;
@@ -240,51 +346,75 @@ public String joinGroupViaInvite(@PathVariable String inviteToken, HttpSession s
 
     // ==================== PENDING JOIN REQUESTS (3.1.19) ====================
     @GetMapping("/groups/{groupId}/requests/pending")
-    public String getPendingJoinRequests(@PathVariable int groupId, HttpSession session, Model model) {
-        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
-        if (currentUser == null) return "redirect:/";
-        Session hibernateSession = HibernateUtil.getSessionFactory().openSession();
-        Group group = null;
-        List<GroupJoinRequest> pendingRequests = new ArrayList<>();
-        try {
-            group = hibernateSession.get(Group.class, groupId);
-            if (group == null || group.getGroupOwner().getUserID() != currentUser.getUserID()) {
-                return "redirect:/";
-            }
-            Hibernate.initialize(group.getJoinRequests());
-            pendingRequests = group.getJoinRequests().stream()
-                    .filter(r -> "PENDING".equals(r.getStatus()))
-                    .collect(Collectors.toList());
-            for (GroupJoinRequest req : pendingRequests) {
-                Hibernate.initialize(req.getRequestingUser());
-                if (req.getRequestingUser() != null) {
-                    Hibernate.initialize(req.getRequestingUser().getUserProfile());
-                }
-            }
-        } finally {
-            hibernateSession.close();
+public String getPendingJoinRequests(@PathVariable int groupId, HttpSession session, Model model) {
+    User currentUser = (User) session.getAttribute(SESSION_DB_USER);
+    if (currentUser == null) return "redirect:/";
+
+    Session hibSession = HibernateUtil.getSessionFactory().openSession();
+    try {
+        Group group = hibSession.get(Group.class, groupId);
+        if (group == null || group.getGroupOwner().getUserID() != currentUser.getUserID()) {
+            return "redirect:/";
         }
+
+        Hibernate.initialize(group.getJoinRequests());
+        List<GroupJoinRequest> pending = group.getJoinRequests().stream()
+                .filter(r -> "PENDING".equals(r.getStatus()) && r.getRequestingUser() != null)
+                .collect(Collectors.toList());
+
+        for (GroupJoinRequest req : pending) {
+            Hibernate.initialize(req.getRequestingUser());
+            Hibernate.initialize(req.getRequestingUser().getUserProfile());
+        }
+
         model.addAttribute("group", group);
-        model.addAttribute("requests", pendingRequests);
+        model.addAttribute("requests", pending);
         model.addAttribute("currentUser", currentUser);
         return "pending-requests";
+    } finally {
+        hibSession.close();
     }
+}
 
     // ==================== ACCEPT JOIN REQUEST (3.1.17) ====================
     @PostMapping("/groups/{groupId}/requests/{requestId}/accept")
-    public String acceptJoinRequest(@PathVariable int groupId, @PathVariable int requestId, HttpSession session) {
-        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
-        Group group = sqlHandler.getGroupById(groupId);
-        if (group == null || group.getGroupOwner().getUserID() != currentUser.getUserID()) return "redirect:/";
-        GroupJoinRequest req = sqlHandler.getGroupJoinRequestById(requestId);
-        if (req != null && req.getGroup().getGroupID() == groupId) {
-            req.setStatus("ACCEPTED");
-            sqlHandler.updateGroupJoinRequest(req);
-            group.addGroupMember(req.getRequestingUser());
-            sqlHandler.updateGroup(group);
+public String acceptJoinRequest(@PathVariable int groupId, @PathVariable int requestId, HttpSession session) {
+    User currentUser = (User) session.getAttribute(SESSION_DB_USER);
+    if (currentUser == null) return "redirect:/";
+
+    Session hibSession = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = hibSession.beginTransaction();
+        Group group = hibSession.get(Group.class, groupId);
+        if (group == null || group.getGroupOwner().getUserID() != currentUser.getUserID()) {
+            tx.commit(); // nothing to do
+            return "redirect:/";
         }
-        return "redirect:/groups/" + groupId + "/requests/pending";
+
+        GroupJoinRequest req = hibSession.get(GroupJoinRequest.class, requestId);
+        if (req != null && req.getGroup().getGroupID() == groupId && "PENDING".equals(req.getStatus())) {
+            req.setStatus("ACCEPTED");
+            hibSession.merge(req);
+
+            // Add the requesting user to the group
+            User newMember = req.getRequestingUser();
+            if (newMember != null && !group.getMembers().contains(newMember)) {
+                group.getMembers().add(newMember);
+            }
+            hibSession.merge(group);
+            tx.commit();
+        } else {
+            tx.commit(); // no valid request
+        }
+    } catch (Exception e) {
+        if (tx != null) tx.rollback();
+        e.printStackTrace();
+    } finally {
+        hibSession.close();
     }
+    return "redirect:/groups/" + groupId + "/requests/pending";
+}
 
     // ==================== DECLINE JOIN REQUEST (3.1.18) ====================
     @PostMapping("/groups/{groupId}/requests/{requestId}/decline")
@@ -426,9 +556,7 @@ public String showVotePage(@PathVariable int groupId, HttpSession session, Model
             }
             Hibernate.initialize(viewedUser.getUserProfile());
             Hibernate.initialize(viewedUser.getAchievementData());
-            for (GameAchievement ga : viewedUser.getAchievementData()) {
-                Hibernate.initialize(ga.getGame());
-            }
+           
             model.addAttribute("viewedUser", viewedUser);
             if (currentUser != null && !currentUser.equals(viewedUser)) {
                 List<User> mutual = new ArrayList<>();
@@ -753,20 +881,19 @@ private String escapeCsv(String value) {
     }
 
     @GetMapping("/profile/export/chart")
-    public ResponseEntity<byte[]> exportChart(HttpSession session) {
-        User dbUser = (User) session.getAttribute("db_user");
-        if (dbUser == null) return ResponseEntity.status(401).build();
-        Session hs = HibernateUtil.getSessionFactory().openSession();
-        try {
-            User user = hs.get(User.class, dbUser.getUserID());
-            Hibernate.initialize(user.getAchievementData());
-            for (GameAchievement ga : user.getAchievementData()) Hibernate.initialize(ga.getGame());
-            byte[] png = graphService.generatePlaytimeChart(user);
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.IMAGE_PNG);
-            return new ResponseEntity<>(png, headers, HttpStatus.OK);
-        } finally { hs.close(); }
-    }
+public ResponseEntity<byte[]> exportChart(HttpSession session) {
+    User dbUser = (User) session.getAttribute("db_user");
+    if (dbUser == null) return ResponseEntity.status(401).build();
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    try {
+        User user = hs.get(User.class, dbUser.getUserID());
+        List<Game> games = sqlHandler.getDistinctGamesByUser(user);
+        byte[] png = graphService.generatePlaytimeChart(games);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.IMAGE_PNG);
+        return new ResponseEntity<>(png, headers, HttpStatus.OK);
+    } finally { hs.close(); }
+}
 
     // ==================== ACTIVITY SUMMARIES (3.1.26, 3.1.27) ====================
     @GetMapping("/profile/activity/weekly")
@@ -777,11 +904,6 @@ public String getWeeklyActivity(HttpSession session, Model model) {
     try {
         User user = hs.get(User.class, sessionUser.getUserID());
         Hibernate.initialize(user.getUserProfile());
-        Hibernate.initialize(user.getAchievementData());
-        for (GameAchievement ga : user.getAchievementData()) {
-            Hibernate.initialize(ga.getGame());
-        }
-        session.setAttribute(SESSION_DB_USER, user);
         model.addAttribute("summary", generateActivitySummary(user, "Weekly"));
         model.addAttribute("period", "Weekly");
         return "activity-summary";
@@ -796,11 +918,6 @@ public String getMonthlyActivity(HttpSession session, Model model) {
     try {
         User user = hs.get(User.class, sessionUser.getUserID());
         Hibernate.initialize(user.getUserProfile());
-        Hibernate.initialize(user.getAchievementData());
-        for (GameAchievement ga : user.getAchievementData()) {
-            Hibernate.initialize(ga.getGame());
-        }
-        session.setAttribute(SESSION_DB_USER, user);
         model.addAttribute("summary", generateActivitySummary(user, "Monthly"));
         model.addAttribute("period", "Monthly");
         return "activity-summary";
@@ -811,26 +928,15 @@ public String getMonthlyActivity(HttpSession session, Model model) {
     private String generateActivitySummary(User user, String period) {
     StringBuilder sb = new StringBuilder();
     sb.append("=== ").append(period.toUpperCase()).append(" ACTIVITY SUMMARY ===\n");
-    
     String profileName = (user.getUserProfile() != null) 
-            ? user.getUserProfile().getProfileName() 
-            : "Unknown";
+            ? user.getUserProfile().getProfileName() : "Unknown";
     sb.append("User: ").append(profileName).append("\n");
-    
     sb.append("Steam ID: ").append(user.getSteamID() != null ? user.getSteamID() : "N/A").append("\n");
-    
-    Set<Game> distinctGames = new HashSet<>();
-    if (user.getAchievementData() != null) {
-        distinctGames = user.getAchievementData().stream()
-                .map(GameAchievement::getGame)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-    }
-    
-    int totalPlaytime = distinctGames.stream().mapToInt(Game::getPlaytime).sum();
+
+    List<Game> games = sqlHandler.getDistinctGamesByUser(user);
+    int totalPlaytime = games.stream().mapToInt(Game::getPlaytime).sum();
     sb.append("Total Playtime: ").append(totalPlaytime / 60).append(" hours\n");
-    sb.append("Games Played: ").append(distinctGames.size()).append("\n");
-    
+    sb.append("Games Played: ").append(games.size()).append("\n");
     return sb.toString();
 }
 
@@ -1053,6 +1159,7 @@ public String deletePreference(@PathVariable int groupId, @PathVariable int pref
     return "redirect:/groups/" + groupId + "/preferences";
 }
 
+
     @PostMapping("/groups/{groupId}/members/{userId}/remove")
     public String removeMember(@PathVariable int groupId, @PathVariable int userId, HttpSession session) {
         User currentUser = (User) session.getAttribute(SESSION_DB_USER);
@@ -1081,7 +1188,9 @@ public String deletePreference(@PathVariable int groupId, @PathVariable int pref
 
     // ==================== RANDOMIZE (FIXED) ====================
 @GetMapping("/groups/{id}/randomize")
-public String randomizeGameList(@PathVariable int id, HttpSession session) {
+public String randomizeGameList(@PathVariable int id, 
+                                @RequestParam(required = false) Integer count,
+                                HttpSession session) {
     User currentUser = (User) session.getAttribute(SESSION_DB_USER);
     if (currentUser == null) return "redirect:/";
     Session hs = HibernateUtil.getSessionFactory().openSession();
@@ -1091,17 +1200,25 @@ public String randomizeGameList(@PathVariable int id, HttpSession session) {
         Group group = hs.get(Group.class, id);
         if (group == null) { tx.commit(); return "redirect:/"; }
         Hibernate.initialize(group.getMembers());
-        boolean isMember = group.getMembers().stream()
-                .anyMatch(m -> m.getUserID() == currentUser.getUserID());
+        boolean isMember = group.getMembers().stream().anyMatch(m -> m.getUserID() == currentUser.getUserID());
         if (!isMember) { tx.commit(); return "redirect:/dashboard"; }
+
+        // Get shared games, then randomize a subset
         GroupOperations ops = new GroupOperations();
-        group.setGames(ops.randomizeGameList(group.getGames()));
+        List<Game> shared = ops.getSharedGames(group, sqlHandler);
+        if (shared.isEmpty()) { tx.commit(); return "redirect:/groups/" + id + "/games?random=true"; }
+
+        Collections.shuffle(shared);
+        if (count != null && count > 0 && count < shared.size()) {
+            shared = shared.subList(0, count);
+        }
+        group.setGames(new ArrayList<>(shared));  // store the subset
         hs.merge(group);
         tx.commit();
     } catch (Exception e) {
         if (tx != null) tx.rollback();
     } finally { hs.close(); }
-    return "redirect:/groups/" + id + "/games";
+    return "redirect:/groups/" + id + "/games?random=true";
 }
 
     @PostMapping("/profile/delete")
@@ -1115,17 +1232,17 @@ public String randomizeGameList(@PathVariable int id, HttpSession session) {
     }
 
     @GetMapping("/groups/{groupId}/generate-invite")
-    @ResponseBody
-    public String generateInviteLink(@PathVariable int groupId, HttpSession session) {
-        User currentUser = (User) session.getAttribute(SESSION_DB_USER);
-        if (currentUser == null) return "Unauthorized";
-        Group group = sqlHandler.getGroupById(groupId);
-        if (group == null || group.getGroupOwner().getUserID() != currentUser.getUserID()) return "Unauthorized";
-        String token = UUID.randomUUID().toString();
-        GroupJoinRequest req = new GroupJoinRequest(group, null, token);
-        sqlHandler.createGroupJoinRequest(req);
-        return "/groups/join/" + token;
-    }
+public ResponseEntity<String> generateInviteLink(@PathVariable int groupId, HttpSession session) {
+    User currentUser = (User) session.getAttribute(SESSION_DB_USER);
+    if (currentUser == null) return ResponseEntity.status(401).body("Not logged in");
+    Group group = sqlHandler.getGroupById(groupId);
+    if (group == null || group.getGroupOwner().getUserID() != currentUser.getUserID())
+        return ResponseEntity.status(403).body("Only the group owner can generate an invite");
+    String token = UUID.randomUUID().toString();
+    GroupJoinRequest req = new GroupJoinRequest(group, null, token);
+    sqlHandler.createGroupJoinRequest(req);
+    return ResponseEntity.ok("/groups/join/" + token);
+}
 
     @GetMapping("/groups")
     public String listGroups(HttpSession session, Model model) {

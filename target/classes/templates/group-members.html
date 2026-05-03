@@ -157,6 +157,10 @@
         </form>
     </div>
 
+    <a th:if="${currentUser.userID == group.groupOwner.userID}"
+       th:href="@{/groups/{id}/requests/pending(id=${group.groupID})}"
+       class="btn-outline"> Requests</a>
+
     <form th:action="@{/groups/{id}/leave(id=${group.groupID})}" method="post" style="margin-top:10px;"
           onsubmit="return confirm('Leave this group?');">
         <button type="submit" class="btn-outline" style="border-color:#ffaaaa;color:#ffaaaa;">Leave Group</button>

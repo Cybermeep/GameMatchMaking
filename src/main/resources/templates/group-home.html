@@ -101,6 +101,9 @@
                 <input type="hidden" name="newOwnerId" th:value="${member.userID}">
                 <button type="submit" class="btn btn-outline">Make Owner</button>
             </form>
+            <a th:if="${currentUser.userID == group.groupOwner.userID}"
+               th:href="@{/groups/{id}/requests/pending(id=${group.groupID})}"
+               class="btn btn-outline"> Requests</a>
             <form th:action="@{/groups/{id}/members/{uid}/remove(id=${group.groupID},uid=${member.userID})}" method="post" style="display:inline">
                 <button type="submit" class="btn btn-danger">Remove</button>
             </form>

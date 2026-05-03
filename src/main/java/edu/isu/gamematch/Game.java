@@ -25,11 +25,17 @@ public class Game{
     @Column(name = "genre")
     private String genre;
 
+    @Column(name = "steam_appid")
+private String appId; 
+
     @Column(name = "playtime_forever")
     private int playtimeForever;
 
     @Column(name = "steam_app_url")
     private String steamAppURL;
+
+    @Column(name = "has_achievements")
+private Boolean hasAchievements = false;      // wrapper Boolean
 
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
     private List<Tag> tags;
@@ -79,6 +85,13 @@ public class Game{
     public void setGenre(String genre){
         this.genre = genre;
     }
+
+   public Boolean isHasAchievements() {
+    return hasAchievements != null ? hasAchievements : false;
+}
+public void setHasAchievements(Boolean hasAchievements) {
+    this.hasAchievements = hasAchievements;
+}
 
     public int getPlaytime(){
         return playtimeForever;
@@ -137,6 +150,9 @@ public class Game{
         gameAchievements.remove(gameAchievement);
         gameAchievement.setGame(null);
     }
+
+    public String getAppId() { return appId; }
+public void setAppId(String appId) { this.appId = appId; }
 
     //methods
 

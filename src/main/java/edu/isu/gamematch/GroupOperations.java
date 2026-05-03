@@ -124,24 +124,23 @@ public class GroupOperations {
     // ==================== LIBRARY INTERSECTION (Fix 5.1) ====================
     /**
      * Computes games owned by ALL members of the group.
-     * Uses the database-backed achievement data for each member.
+     * Uses the database backed achievement data for each member.
      */
-    public List<Game> getSharedGames(Group group, SQLHandler sqlHandler) {
-        Set<Game> shared = null;
-        for (User member : group.getMembers()) {
-            // Retrieve member's game list via their achievement links
-            Set<Game> memberGames = member.getAchievementData().stream()
-                    .map(GameAchievement::getGame)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
-
-            if (shared == null) {
-                shared = new HashSet<>(memberGames);
-            } else {
-                shared.retainAll(memberGames);
-            }
-            if (shared.isEmpty()) break;
+   public List<Game> getSharedGames(Group group, SQLHandler sqlHandler) {
+    Set<Game> shared = null;
+    for (User member : group.getMembers()) {
+        List<Game> memberGames = sqlHandler.getDistinctGamesByUser(member);
+        if (memberGames.isEmpty()) {
+            continue;   // Skip members with no games
         }
-        return shared == null ? new ArrayList<>() : new ArrayList<>(shared);
+        if (shared == null) {
+            shared = new HashSet<>(memberGames);
+        } else {
+            shared.retainAll(memberGames);
+        }
+        if (shared.isEmpty()) break;
     }
+    return shared == null ? new ArrayList<>() : new ArrayList<>(shared);
+}
+
 }

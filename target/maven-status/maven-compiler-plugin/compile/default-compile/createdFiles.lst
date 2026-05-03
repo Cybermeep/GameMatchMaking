@@ -14,6 +14,7 @@ edu\isu\gamematch\SQLHandler.class
 edu\isu\gamematch\GameAchievement.class
 edu\isu\gamematch\DataParser.class
 edu\isu\gamematch\GroupPreference.class
+edu\isu\gamematch\steam\SteamAchievement.class
 edu\isu\gamematch\HibernateUtil.class
 edu\isu\gamematch\imports\ImportData$ImportRecord.class
 edu\isu\gamematch\controller\GlobalExceptionHandler.class
@@ -21,6 +22,7 @@ edu\isu\gamematch\steam\SteamAuthService.class
 edu\isu\gamematch\Achievement.class
 edu\isu\gamematch\export\ExportCSV$ExportValidationRule.class
 edu\isu\gamematch\imports\ImportLocalData.class
+edu\isu\gamematch\config\SchemaFix.class
 edu\isu\gamematch\imports\ImportData$ValidationRule.class
 edu\isu\gamematch\export\ExportData$ExportStatus$Status.class
 edu\isu\gamematch\imports\ImportData$ImportResult.class

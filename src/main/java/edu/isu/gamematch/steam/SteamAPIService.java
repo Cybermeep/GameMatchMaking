@@ -8,6 +8,8 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.io.IOException;
 import java.util.*;
 
@@ -62,6 +64,7 @@ public class SteamAPIService {
             for (JsonNode node : gameNodes) {
                 SteamGame sg = new SteamGame();
                 sg.setAppId(String.valueOf(node.path("appid").asInt()));
+                sg.setHasAchievements(node.path("has_community_visible_stats").asBoolean());
 
                 sg.setName(node.path("name").asText());
                 sg.setPlaytimeForever(node.path("playtime_forever").asInt());
@@ -73,6 +76,31 @@ public class SteamAPIService {
         }
         return games;
     }
+
+    public List<SteamAchievement> fetchPlayerAchievements(String steamId, String appId) {
+    String url = "http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?key="
+                 + apiKey + "&steamid=" + steamId + "&appid=" + appId;
+    List<SteamAchievement> achievements = new ArrayList<>();
+    try {
+        String json = restTemplate.getForObject(url, String.class);
+        JsonNode root = mapper.readTree(json);
+        JsonNode achievementNodes = root.path("playerstats").path("achievements");
+        if (achievementNodes.isArray()) {
+            for (JsonNode node : achievementNodes) {
+                SteamAchievement sa = new SteamAchievement();
+                sa.setApiName(node.path("apiname").asText());
+                sa.setAchieved(node.path("achieved").asInt() == 1);
+                sa.setName(node.path("name").asText());
+                sa.setDescription(node.path("description").asText());
+                achievements.add(sa);
+            }
+        }
+    } catch (Exception e) {
+        logger.warn("Failed to fetch achievements for appId={} steamId={}: {}",
+                appId, steamId, e.getMessage());
+    }
+    return achievements;
+}
 
     /**
  * Fetches a SteamUser with profile, owned games, and recently played games all populated.

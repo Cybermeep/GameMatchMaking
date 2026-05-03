@@ -12,33 +12,33 @@ import java.util.stream.Collectors;
 @Service
 public class GraphService {
 
-    public byte[] generatePlaytimeChart(User user) {
-        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        List<Game> games = Collections.emptyList();
-        if (user.getAchievementData() != null) {
-            games = user.getAchievementData().stream()
-                    .map(GameAchievement::getGame)
-                    .filter(Objects::nonNull)
-                    .distinct()
-                    .sorted(Comparator.comparingInt(Game::getPlaytime))   // ascending
-                    .collect(Collectors.toList());
-        }
-        for (Game game : games) {
-            // Truncate long names to avoid clutter
-            String name = game.getGameName();
-            if (name.length() > 20) name = name.substring(0, 18) + "_";
-            double hours = game.getPlaytime() / 60.0;
-            dataset.addValue(hours, "Hours", name);
-        }
-        JFreeChart chart = ChartFactory.createBarChart(
-            "Game Playtime (ascending)", "Game", "Hours", dataset);
-        // Rotate x-axis labels
-        chart.getCategoryPlot().getDomainAxis().setCategoryLabelPositions(
-            org.jfree.chart.axis.CategoryLabelPositions.UP_45);
+    public byte[] generatePlaytimeChart(List<Game> games) {
+    DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+    if (games == null || games.isEmpty()) {
+        // return empty chart
+        JFreeChart chart = ChartFactory.createBarChart("Game Playtime", "Game", "Hours", dataset);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
             ChartUtils.writeChartAsPNG(baos, chart, 800, 600);
             return baos.toByteArray();
         } catch (IOException e) { throw new RuntimeException(e); }
     }
+    // Sort by playtime ascending
+    games.sort(Comparator.comparingInt(Game::getPlaytime));
+    for (Game game : games) {
+        String name = game.getGameName();
+        if (name.length() > 20) name = name.substring(0, 18) + "…";
+        double hours = game.getPlaytime() / 60.0;
+        dataset.addValue(hours, "Hours", name);
+    }
+    JFreeChart chart = ChartFactory.createBarChart(
+        "Game Playtime (ascending)", "Game", "Hours", dataset);
+    chart.getCategoryPlot().getDomainAxis().setCategoryLabelPositions(
+        org.jfree.chart.axis.CategoryLabelPositions.UP_45);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try {
+        ChartUtils.writeChartAsPNG(baos, chart, 800, 600);
+        return baos.toByteArray();
+    } catch (IOException e) { throw new RuntimeException(e); }
+}
 }

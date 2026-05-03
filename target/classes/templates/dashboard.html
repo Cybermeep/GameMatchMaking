@@ -486,9 +486,15 @@
                     <div class="stat-lbl">Hours Played</div>
                 </div>
             </div>
-            <form th:if="${isSteam}" action="/resync" method="post">
-                <button type="submit" class="btn-sync"> Sync Library</button>
-            </form>
+            <!-- Sync buttons (Steam only) -->
+            <div th:if="${isSteam}" style="display:flex; gap:10px; margin-top:12px;">
+                <form action="/resync" method="post">
+                    <button type="submit" class="btn-sync"> Sync Library</button>
+                </form>
+                <form action="/resync-achievements" method="post">
+                    <button type="submit" class="btn-sync"> Sync Achievements</button>
+                </form>
+            </div>
         </div>
 
         <!-- My Groups -->
@@ -521,7 +527,7 @@
         </div>
 
         <div style="margin-top:16px;">
-            <form th:action="@{/groups/join}" method="get" style="display:flex; gap:8px;">
+            <form th:action="@{/groups/join}" method="post" style="display:flex; gap:8px;">
                 <input type="text" name="token" placeholder="Paste invite token..." class="form-input" required>
                 <button type="submit" class="btn-outline">Join Group</button>
             </form>

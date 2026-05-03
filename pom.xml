@@ -41,13 +41,6 @@
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
-		<dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId>
-			<scope>compile</scope>
-			<!-- temporarily for test profile -->
-		</dependency>
-
 		<!-- Spring Session -->
 		<dependency>
 			<groupId>org.springframework.session</groupId>

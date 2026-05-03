@@ -18,8 +18,8 @@ private int requestId;
     private Group group;
     
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User requestingUser;
+@JoinColumn(name = "user_id", nullable = true)
+private User requestingUser;
     
     @Column(name = "status", nullable = false)
     private String status; // "PENDING", "ACCEPTED", "DECLINED"

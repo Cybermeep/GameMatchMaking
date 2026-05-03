@@ -1021,6 +1021,19 @@ public User getUserBySteamId(String steamId) {
     }
 }
 
+public List<Game> getDistinctGamesByUser(User user) {
+    Session session = HibernateUtil.getSessionFactory().openSession();
+    try {
+        return session.createQuery(
+            "SELECT DISTINCT ga.game FROM GameAchievement ga WHERE ga.user = :user AND ga.game IS NOT NULL",
+            Game.class)
+            .setParameter("user", user)
+            .list();
+    } finally {
+        session.close();
+    }
+}
+
 public boolean deleteGroupPreference(GroupPreference pref) {
     Session session = HibernateUtil.getSessionFactory().openSession();
     Transaction tx = null;
