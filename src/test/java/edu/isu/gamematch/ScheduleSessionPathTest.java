@@ -113,4 +113,8 @@ public class ScheduleSessionPathTest {
         group.addGroupMember(owner);
         return group;
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 63e729dbaef0e5fcb391e4aaca2d9707585c89b5
