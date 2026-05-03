@@ -58,8 +58,8 @@ public class VoteTest {
         // Tallying the list
         Map<Game, Integer> tally = GroupVote.tallyVotes(votes);
         
-        assertEquals(1, tally.get(gameA), "Tally should show 1 vote for Game A[cite: 2]");
-        assertFalse(tally.containsKey(null), "Path: Null games should not be in tally[cite: 2]");
+        assertEquals(1, tally.get(gameA), "Tally should show 1 vote for Game A");
+        assertFalse(tally.containsKey(null), "Path: Null games should not be in tally");
     }
 
     /**
@@ -73,11 +73,11 @@ public class VoteTest {
         GroupVote vote = new GroupVote(new Group(), new User());
 
         // Path: Updating before casting
-        assertFalse(vote.updateVote(newGame), "Should fail if no vote exists[cite: 2]");
+        assertFalse(vote.updateVote(newGame), "Should fail if no vote exists");
 
         // Path: Successful update
         vote.castVote(oldGame);
-        assertTrue(vote.updateVote(newGame), "User should be able to change their vote[cite: 2]");
-        assertEquals(newGame, vote.getGame(), "Recorded game should be updated[cite: 2]");
+        assertTrue(vote.updateVote(newGame), "User should be able to change their vote");
+        assertEquals(newGame, vote.getGame(), "Recorded game should be updated");
     }
 }
