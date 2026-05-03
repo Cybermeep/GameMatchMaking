@@ -27,7 +27,7 @@ public class GraphService {
     games.sort(Comparator.comparingInt(Game::getPlaytime));
     for (Game game : games) {
         String name = game.getGameName();
-        if (name.length() > 20) name = name.substring(0, 18) + "…";
+        if (name.length() > 20) name = name.substring(0, 18) + "_";
         double hours = game.getPlaytime() / 60.0;
         dataset.addValue(hours, "Hours", name);
     }
