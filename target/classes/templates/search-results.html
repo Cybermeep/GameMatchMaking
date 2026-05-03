@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Search Results</title>
+    <style>
+        body {
+            font-family: 'Segoe UI',sans-serif;
+            background: #1b2838;
+            color: #c6d4df;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #66c0f4;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        input[type=text] {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(102,192,244,0.2);
+            border-radius: 6px;
+            padding: 10px;
+            color: #c6d4df;
+            width: 250px;
+        }
+
+        button {
+            background: #66c0f4;
+            color: #111920;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            background: #16202d;
+            border: 1px solid rgba(102,192,244,0.1);
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        a {
+            color: #66c0f4;
+            text-decoration: none;
+        }
+
+            a:hover {
+                text-decoration: underline;
+            }
+
+        .btn-outline {
+            color: #66c0f4;
+            border: 1px solid #66c0f4;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            background: transparent;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+            .btn-outline:hover {
+                background: rgba(102,192,244,0.1);
+            }
+    </style>
+</head>
+<body>
+    <a href="/dashboard" style="color:#66c0f4;">🔙 Back to Dashboard</a>
+    <h1>Search results for "<span th:text="${query}">query</span>"</h1>
+    <form th:action="@{/users/search}" method="get">
+        <input type="text" name="q" th:value="${query}" placeholder="Search users...">
+        <button type="submit">Search</button>
+    </form>
+    <ul th:if="${results != null and !results.empty}">
+        <li th:each="user : ${results}">
+            <span>
+                <a th:href="@{/users/by-id(userId=${user.userID})}" th:text="${user.userProfile.profileName}">User</a>
+            </span>
+            <form th:action="@{/users/add-friend}" method="post" style="display:inline;">
+                <input type="hidden" name="friendUserId" th:value="${user.userID}">
+                <button type="submit" class="btn-outline">+ Add Friend</button>
+            </form>
+        </li>
+    </ul>
+    <p th:unless="${results != null and !results.empty}">No users found.</p>
+</body>
+</html>

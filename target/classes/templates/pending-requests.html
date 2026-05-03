@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Pending Join Requests</title>
+    <style>
+        body {
+            font-family: 'Segoe UI',sans-serif;
+            background: #1b2838;
+            color: #c6d4df;
+            padding: 20px
+        }
+
+        h1 {
+            color: #66c0f4
+        }
+
+        ul {
+            list-style: none;
+            padding: 0
+        }
+
+        li {
+            background: #16202d;
+            border: 1px solid rgba(102,192,244,0.1);
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between
+        }
+
+        .btn-primary {
+            background: #66c0f4;
+            color: #111920;
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #66c0f4;
+            border: 1px solid #66c0f4;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem
+        }
+    </style>
+</head>
+<body>
+    <h1 th:text="'Join requests for ' + ${group.groupName}">Pending Requests</h1>
+    <ul>
+        <li th:each="req : ${requests}">
+            <span th:text="${req.requestingUser.userProfile.profileName}">User</span>
+            <div>
+                <form th:action="@{/groups/{id}/requests/{reqId}/accept(id=${group.groupID},reqId=${req.requestId})}" method="post" style="display:inline">
+                    <button type="submit" class="btn-primary">Accept</button>
+                </form>
+                <form th:action="@{/groups/{id}/requests/{reqId}/decline(id=${group.groupID},reqId=${req.requestId})}" method="post" style="display:inline">
+                    <button type="submit" class="btn-outline">Decline</button>
+                </form>
+            </div>
+        </li>
+    </ul>
+</body>
+</html>

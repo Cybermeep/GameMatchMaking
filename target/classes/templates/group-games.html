@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Group Games</title>
+    <style>
+        body {
+            font-family: 'Segoe UI',sans-serif;
+            background: #1b2838;
+            color: #c6d4df;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #66c0f4;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid rgba(102,192,244,0.2);
+            padding: 10px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            background: #16202d;
+            color: #66c0f4;
+        }
+
+        a {
+            color: #66c0f4;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: #66c0f4;
+            color: #111920;
+            padding: 7px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-outline {
+            color: #66c0f4;
+            border: 1px solid #66c0f4;
+            padding: 7px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+            .btn-outline:hover {
+                background: rgba(102,192,244,0.1);
+            }
+
+        .btn-small {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+        }
+
+        .sub-nav {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            margin-top: 20px;
+            padding: 15px;
+            background: #16202d;
+            border-radius: 8px;
+        }
+
+        select {
+            padding: 4px;
+            background: #222;
+            color: #c6d4df;
+            border: 1px solid #444;
+            border-radius: 4px;
+        }
+
+        .tag-chip {
+            display: inline-block;
+            background: #2a475e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin: 2px;
+            font-size: 0.8rem;
+        }
+
+        .tag-remove {
+            background: none;
+            border: none;
+            color: #ff8888;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 0 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sub-nav">
+        <a th:href="@{/groups/{id}/games(id=${group.groupID})}" class="btn-outline" style="color:white;background:#66c0f4;border-color:#66c0f4;"> Games</a>
+        <a th:href="@{/groups/{id}/members(id=${group.groupID})}" class="btn-outline"> Members</a>
+        <a th:href="@{/groups/{id}/sessions(id=${group.groupID})}" class="btn-outline"> Sessions</a>
+        <a th:href="@{/groups/{id}/achievements(id=${group.groupID})}" class="btn-outline"> Achievements</a>
+        <a th:href="@{/groups/{id}/vote(id=${group.groupID})}" class="btn-outline"> Vote</a>
+        <a th:href="@{/groups/{id}/home(id=${group.groupID})}" class="btn-outline"> Home</a>
+        <a th:href="@{/groups/{id}/preferences(id=${group.groupID})}" class="btn btn-outline"> Tags</a>
+    </div>
+
+    <h1 th:text="'Games for ' + ${group.groupName}">Group Games</h1>
+    <div th:if="${minPlaytime > 0}">
+        <p>Filtered by minimum playtime: <span th:text="${minPlaytime}"></span> minutes</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Game</th>
+                <th>Genre / Tags</th>
+                <th>Playtime (min)</th>
+                <th>Steam</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="game : ${games}">
+                <td th:text="${game.gameName}"></td>
+                <td style="min-width: 220px;">
+                    <!-- Current tags as removable chips -->
+                    <div style="margin-bottom: 4px;">
+                        <span th:each="tag : ${game.genre != null ? #strings.arraySplit(game.genre, ',') : {}}"
+                              class="tag-chip">
+                            <span th:text="${tag.trim()}">tag</span>
+                            <form th:action="@{/groups/{id}/remove-game-genre(id=${group.groupID})}" method="post" style="display:inline;">
+                                <input type="hidden" name="gameId" th:value="${game.gameID}">
+                                <input type="hidden" name="genre" th:value="${tag.trim()}">
+                                <button type="submit" class="tag-remove" title="Remove tag">&times;</button>
+                            </form>
+                        </span>
+                    </div>
+                    <!-- Add tag dropdown -->
+                    <form th:action="@{/groups/{id}/update-game-genre(id=${group.groupID})}" method="post" style="display:flex; gap:4px; align-items:center;">
+                        <input type="hidden" name="gameId" th:value="${game.gameID}">
+                        <select name="genre" style="padding:2px; font-size:0.8rem;">
+                            <option value="">Add tag...</option>
+                            <option th:each="tag : ${groupTags}" th:value="${tag.preferenceName}" th:text="${tag.preferenceName}"></option>
+                        </select>
+                        <button type="submit" class="btn-outline btn-small">Set</button>
+                    </form>
+                </td>
+                <td th:text="${game.playtime}"></td>
+                <td><a th:href="${game.steamAppURL}" target="_blank">Store Page</a></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Min playtime form for owner -->
+    <div th:if="${group.groupOwner.userID == currentUser.userID}" class="form-group">
+        <form th:action="@{/groups/{id}/playtime-requirement(id=${group.groupID})}" method="post" style="display:inline-block;">
+            <label>Min. playtime (minutes): <input type="number" name="minPlaytimeMinutes" min="0" style="width:80px"></label>
+            <button type="submit" class="btn-primary">Set</button>
+        </form>
+        <!-- Reset Filters button -->
+        <a th:href="@{/groups/{id}/games(id=${group.groupID})}" class="btn-outline" style="margin-left:8px;"> Reset Filters</a>
+    </div>
+    <!-- Reset button for non-owner -->
+    <div th:unless="${group.groupOwner.userID == currentUser.userID}" style="margin-top:10px;">
+        <a th:href="@{/groups/{id}/games(id=${group.groupID})}" class="btn-outline"> Reset Filters</a>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <a th:href="@{/groups/{id}/vote(id=${group.groupID})}" class="btn-primary">Vote on Games</a>
+
+        <!-- Randomize with count input -->
+        <form th:action="@{/groups/{id}/randomize(id=${group.groupID})}" method="get" style="display:flex; gap:4px; align-items:center;">
+            <input type="number" name="count" min="1" placeholder="# games" style="width:70px; padding:4px;">
+            <button type="submit" class="btn-outline btn-small">Randomize</button>
+        </form>
+
+        <a th:href="@{/groups/{id}/games/csv(id=${group.groupID})}" class="btn-outline"> Export CSV</a>
+
+        <button onclick="shareGameList()" class="btn-outline"> Share Game List</button>
+        <span id="shareUrl" style="margin-left:10px; font-size:0.9rem;"></span>
+    </div>
+
+    <script th:inline="javascript">
+        var groupId = /*[[${group.groupID}]]*/ 0;
+
+        function shareGameList() {
+            fetch('/groups/' + groupId + '/share-games', { method: 'POST' })
+                .then(r => r.text())
+                .then(path => {
+                    document.getElementById('shareUrl').innerHTML =
+                        'Link: <a href="' + path + '" style="color:#66c0f4;">' + window.location.origin + path + '</a>';
+                });
+        }
+    </script>
+</body>
+</html>

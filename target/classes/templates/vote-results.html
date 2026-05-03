@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Vote Results</title>
+    <style>
+        body {
+            font-family: 'Segoe UI',sans-serif;
+            background: #1b2838;
+            color: #c6d4df;
+            padding: 20px
+        }
+
+        .btn-outline {
+            color: #66c0f4;
+            border: 1px solid #66c0f4;
+            padding: 6px 14px;
+            border-radius: 6px;
+            text-decoration: none;
+            display: inline-block
+        }
+
+        .sub-nav {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 8px
+        }
+    </style>
+</head>
+<body>
+    <div class="sub-nav">
+        <a th:href="@{/groups/{id}/games(id=${group.groupID})}" class="btn-outline"> Games</a>
+        <a th:href="@{/groups/{id}/members(id=${group.groupID})}" class="btn-outline"> Members</a>
+        <a th:href="@{/groups/{id}/sessions(id=${group.groupID})}" class="btn-outline"> Sessions</a>
+        <a th:href="@{/groups/{id}/achievements(id=${group.groupID})}" class="btn-outline"> Achievements</a>
+        <a th:href="@{/groups/{id}/vote(id=${group.groupID})}" class="btn-outline"> Vote</a>
+        <a th:href="@{/groups/{id}/home(id=${group.groupID})}" class="btn-outline"> Home</a>
+    </div>
+    <h1 th:text="'Results for ' + ${group.groupName}">Results</h1>
+    <ul>
+        <li th:each="entry : ${tally}" th:text="${entry.key.gameName} + ' : ' + ${entry.value} + ' votes'"></li>
+    </ul>
+    <p th:if="${winner != null}">Winner: <strong th:text="${winner.gameName}"></strong></p>
+    <p th:unless="${winner != null}">No winner (tie or no votes)</p>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Shared Game List</title>
+</head>
+<body style="background:#1b2838; color:#c6d4df; padding:20px;">
+    <h1 th:text="${group.groupName}">Game List</h1>
+    <table border="1">
+        <tr><th>Game</th><th>Genre</th><th>Playtime (min)</th></tr>
+        <tr th:each="game : ${games}">
+            <td th:text="${game.gameName}"></td>
+            <td th:text="${game.genre}"></td>
+            <td th:text="${game.playtime}"></td>
+        </tr>
+    </table>
+    <p style="margin-top:10px;"><a href="/" style="color:#66c0f4;">GameMatch Home</a></p>
+</body>
+</html>
