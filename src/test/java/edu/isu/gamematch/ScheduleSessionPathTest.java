@@ -1,8 +1,6 @@
 package edu.isu.gamematch;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -41,7 +39,6 @@ public class ScheduleSessionPathTest {
     @Test
     public void scheduleSessionRedirectsHomeWhenUserIsNotLoggedIn() {
         String view = controller.scheduleSession(10, 20, "2026-05-10T19:30", 120, httpSession);
-
         assertEquals("redirect:/", view);
         verify(sqlHandler, never()).getGroupById(any(Integer.class));
         verify(sqlHandler, never()).getGameById(any(Integer.class));
@@ -53,9 +50,7 @@ public class ScheduleSessionPathTest {
         httpSession.setAttribute(SESSION_DB_USER, createUser(1, "Scheduler"));
         when(sqlHandler.getGroupById(10)).thenReturn(null);
         when(sqlHandler.getGameById(20)).thenReturn(new Game(20, "Helldivers 2", "Co-op Shooter"));
-
         String view = controller.scheduleSession(10, 20, "2026-05-10T19:30", 120, httpSession);
-
         assertEquals("redirect:/", view);
         verify(sqlHandler, never()).createGroupSession(any(GroupSession.class));
     }
@@ -67,9 +62,7 @@ public class ScheduleSessionPathTest {
         httpSession.setAttribute(SESSION_DB_USER, user);
         when(sqlHandler.getGroupById(10)).thenReturn(group);
         when(sqlHandler.getGameById(20)).thenReturn(null);
-
         String view = controller.scheduleSession(10, 20, "2026-05-10T19:30", 120, httpSession);
-
         assertEquals("redirect:/", view);
         verify(sqlHandler, never()).createGroupSession(any(GroupSession.class));
     }
@@ -83,13 +76,10 @@ public class ScheduleSessionPathTest {
         when(sqlHandler.getGroupById(10)).thenReturn(group);
         when(sqlHandler.getGameById(20)).thenReturn(game);
         when(sqlHandler.createGroupSession(any(GroupSession.class))).thenReturn(true);
-
         String view = controller.scheduleSession(10, 20, "2026-05-10T19:30", 120, httpSession);
-
         assertEquals("redirect:/groups/10/sessions", view);
         ArgumentCaptor<GroupSession> captor = ArgumentCaptor.forClass(GroupSession.class);
         verify(sqlHandler).createGroupSession(captor.capture());
-
         GroupSession createdSession = captor.getValue();
         assertSame(group, createdSession.getGroup());
         assertSame(game, createdSession.getGame());
@@ -113,8 +103,4 @@ public class ScheduleSessionPathTest {
         group.addGroupMember(owner);
         return group;
     }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 63e729dbaef0e5fcb391e4aaca2d9707585c89b5
