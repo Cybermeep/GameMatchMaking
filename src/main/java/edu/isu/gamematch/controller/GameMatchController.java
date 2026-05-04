@@ -898,28 +898,62 @@ public ResponseEntity<byte[]> exportChart(HttpSession session) {
     // ==================== ACTIVITY SUMMARIES (3.1.26, 3.1.27) ====================
     @GetMapping("/profile/activity/weekly")
 public String getWeeklyActivity(HttpSession session, Model model) {
-    User sessionUser = (User) session.getAttribute(SESSION_DB_USER);
-    if (sessionUser == null) return "redirect:/";
-    Session hs = HibernateUtil.getSessionFactory().openSession();
-    try {
-        User user = hs.get(User.class, sessionUser.getUserID());
-        Hibernate.initialize(user.getUserProfile());
-        model.addAttribute("summary", generateActivitySummary(user, "Weekly"));
-        model.addAttribute("period", "Weekly");
-        return "activity-summary";
-    } finally { hs.close(); }
+    return buildActivitySummary(session, model, "Weekly");
 }
 
 @GetMapping("/profile/activity/monthly")
 public String getMonthlyActivity(HttpSession session, Model model) {
+    return buildActivitySummary(session, model, "Monthly");
+}
+
+private String buildActivitySummary(HttpSession session, Model model, String period) {
     User sessionUser = (User) session.getAttribute(SESSION_DB_USER);
     if (sessionUser == null) return "redirect:/";
     Session hs = HibernateUtil.getSessionFactory().openSession();
     try {
         User user = hs.get(User.class, sessionUser.getUserID());
         Hibernate.initialize(user.getUserProfile());
-        model.addAttribute("summary", generateActivitySummary(user, "Monthly"));
-        model.addAttribute("period", "Monthly");
+        
+        // Compute the text summary (as before, but using the lightweight query)
+        String summary = generateActivitySummary(user, period);
+        model.addAttribute("summary", summary);
+        model.addAttribute("period", period);
+
+        // Gather sessions from all groups this user belongs to
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate start, end;
+        if ("Weekly".equals(period)) {
+            start = today.with(java.time.DayOfWeek.MONDAY);
+            end = start.plusDays(6);
+        } else { // Monthly
+            start = today.withDayOfMonth(1);
+            end = start.plusMonths(1).minusDays(1);
+        }
+
+        List<Group> groups = hs.createQuery(
+            "SELECT g FROM Group g JOIN g.members m WHERE m.userID = :uid", Group.class)
+            .setParameter("uid", user.getUserID())
+            .list();
+        for (Group g : groups) {
+            Hibernate.initialize(g.getSessions());
+            Hibernate.initialize(g.getGames());  // for session game names
+            for (GroupSession gs : g.getSessions()) {
+                Hibernate.initialize(gs.getGame());
+            }
+        }
+
+        List<GroupSession> upcomingSessions = new ArrayList<>();
+        for (Group g : groups) {
+            for (GroupSession gs : g.getSessions()) {
+                if (gs.getScheduledDate() != null) {
+                    java.time.LocalDate sessDate = gs.getScheduledDate().toLocalDate();
+                    if (!sessDate.isBefore(start) && !sessDate.isAfter(end)) {
+                        upcomingSessions.add(gs);
+                    }
+                }
+            }
+        }
+        model.addAttribute("sessions", upcomingSessions);
         return "activity-summary";
     } finally { hs.close(); }
 }
@@ -1070,41 +1104,86 @@ public String listPreferences(@PathVariable int groupId, HttpSession session, Mo
     }
 
     // ==================== SHARABLE GAME LIST (FIXED) ====================
+@PostMapping("/groups/{groupId}/share-games")
 @ResponseBody
 public String shareGameList(@PathVariable int groupId, HttpSession session) {
     User currentUser = (User) session.getAttribute("db_user");
     if (currentUser == null) return "Unauthorized";
     Session hs = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
     try {
+        tx = hs.beginTransaction();
         Group group = hs.get(Group.class, groupId);
-        if (group == null) return "Group not found";
+        if (group == null) {
+            tx.commit();
+            return "Group not found";
+        }
         Hibernate.initialize(group.getMembers());
-        boolean isMember = group.getMembers().stream()
-                .anyMatch(m -> m.getUserID() == currentUser.getUserID());
-        if (!isMember) return "Unauthorized";
+        boolean isMember = group.getMembers().stream().anyMatch(m -> m.getUserID() == currentUser.getUserID());
+        if (!isMember) {
+            tx.commit();
+            return "Unauthorized";
+        }
         String token = UUID.randomUUID().toString().substring(0, 8);
         group.setShareToken(token);
-        hs.beginTransaction();
         hs.merge(group);
-        hs.getTransaction().commit();
+        tx.commit();
         return "/groups/shared/" + token;
+    } catch (Exception e) {
+        if (tx != null) tx.rollback();
+        return "Error";
     } finally { hs.close(); }
 }
 
+@PostMapping("/groups/{groupId}/reset-filters")
+public String resetFilters(@PathVariable int groupId, HttpSession session) {
+    User currentUser = (User) session.getAttribute("db_user");
+    if (currentUser == null) return "redirect:/";
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    Transaction tx = null;
+    try {
+        tx = hs.beginTransaction();
+        Group group = hs.get(Group.class, groupId);
+        if (group == null) {
+            tx.commit();
+            return "redirect:/dashboard";
+        }
+        // verify membership
+        Hibernate.initialize(group.getMembers());
+        boolean isMember = group.getMembers().stream().anyMatch(m -> m.getUserID() == currentUser.getUserID());
+        if (!isMember) {
+            tx.commit();
+            return "redirect:/dashboard";
+        }
+        // Reset the stored min playtime requirement
+        group.setMinPlaytimeRequirement(0);
+        // Clear the stored game list (so it returns to shared games)
+        group.getGames().clear();
+        hs.merge(group);
+        tx.commit();
+    } catch (Exception e) {
+        if (tx != null) tx.rollback();
+    } finally { hs.close(); }
+    return "redirect:/groups/" + groupId + "/games";
+}
+
     @GetMapping("/groups/shared/{token}")
-    public String viewSharedGames(@PathVariable String token, Model model) {
-        Session hs = HibernateUtil.getSessionFactory().openSession();
-        try {
-            Group group = hs.createQuery("FROM Group WHERE shareToken = :token", Group.class)
-                .setParameter("token", token)
-                .uniqueResult();
-            if (group == null) return "redirect:/";
-            Hibernate.initialize(group.getGames());
-            model.addAttribute("group", group);
-            model.addAttribute("games", group.getGames());
-            return "shared-games";
-        } finally { hs.close(); }
-    }
+public String viewSharedGames(@PathVariable String token, Model model) {
+    Session hs = HibernateUtil.getSessionFactory().openSession();
+    try {
+        Group group = hs.createQuery(
+            "FROM Group WHERE shareToken = :token", Group.class)
+            .setParameter("token", token)
+            .uniqueResult();
+            if (group == null) {
+            return "redirect:/";
+        }
+        Hibernate.initialize(group.getGames());
+        model.addAttribute("group", group);
+        model.addAttribute("games", group.getGames());
+        return "shared-games";
+    } finally { hs.close(); }
+}
 
     // ==================== ADDITIONAL ENDPOINTS ====================
     @GetMapping("/groups/{id}")

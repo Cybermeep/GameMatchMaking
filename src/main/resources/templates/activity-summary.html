@@ -7,5 +7,17 @@
     <a href="/dashboard" style="color:#66c0f4;">Back to Dashboard</a>
     <h1 th:text="${period} + ' Activity Summary'"></h1>
     <pre th:text="${summary}"></pre>
+
+    <div th:if="${sessions != null and !sessions.empty}" style="margin-top:20px;">
+        <h3 th:text="'Upcoming ' + ${period} + ' Sessions'"></h3>
+        <ul style="list-style:none; padding:0;">
+            <li th:each="gs : ${sessions}" style="background:#16202d; border:1px solid rgba(102,192,244,0.1); margin-bottom:6px; padding:8px; border-radius:6px;">
+                <span th:text="${gs.group.groupName}">Group</span> :
+                <strong th:text="${gs.game.gameName}">Game</strong>
+                (<span th:text="${#temporals.format(gs.scheduledDate, 'MMM dd, HH:mm')}"></span>)
+                for <span th:text="${gs.duration}"></span> min
+            </li>
+        </ul>
+    </div>
 </body>
 </html>

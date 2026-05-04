@@ -129,9 +129,12 @@ public class GroupOperations {
    public List<Game> getSharedGames(Group group, SQLHandler sqlHandler) {
     Set<Game> shared = null;
     for (User member : group.getMembers()) {
-        List<Game> memberGames = sqlHandler.getDistinctGamesByUser(member);
+        List<Game> memberGames = sqlHandler.getDistinctGamesByUser(member).stream()
+                .filter(g -> g.getAppId() != null && !g.getAppId().isEmpty())
+                .collect(Collectors.toList());
+
         if (memberGames.isEmpty()) {
-            continue;   // Skip members with no games
+            continue;
         }
         if (shared == null) {
             shared = new HashSet<>(memberGames);

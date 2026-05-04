@@ -31,6 +31,7 @@ edu\isu\gamematch\export\ExportCSV$PreparedExportData.class
 edu\isu\gamematch\export\ExportData$ExportStatus.class
 edu\isu\gamematch\steam\SteamController.class
 edu\isu\gamematch\config\SecurityConfig.class
+edu\isu\gamematch\service\SteamImportService.class
 edu\isu\gamematch\steam\SteamDataParser.class
 edu\isu\gamematch\config\DatabaseInitializer.class
 edu\isu\gamematch\service\GraphService.class

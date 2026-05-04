@@ -5,24 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard — GameMatch</title>
     <style>
-        /* ... all existing styles ... */
         *, *::before, *::after {
             margin: 0;
             padding: 0;
-            box-sizing: border-box
+            box-sizing: border-box;
         }
 
         :root {
             --blue: #66c0f4;
             --dark: #1b2838;
             --card: #16202d;
-            --border: rgba(102,192,244,0.15)
+            --border: rgba(102,192,244,0.15);
         }
 
         body {
             font-family: 'Segoe UI',sans-serif;
             background: var(--dark);
-            color: #c6d4df
+            color: #c6d4df;
         }
 
         .navbar {
@@ -35,19 +34,19 @@
             border-bottom: 1px solid var(--border);
             position: sticky;
             top: 0;
-            z-index: 100
+            z-index: 100;
         }
 
         .logo {
             font-size: 1.2rem;
             font-weight: 700;
-            color: var(--blue)
+            color: var(--blue);
         }
 
         .nav-links {
             display: flex;
             gap: 24px;
-            align-items: center
+            align-items: center;
         }
 
             .nav-links a, .nav-links form {
@@ -60,12 +59,12 @@
                 background: none;
                 border: none;
                 cursor: pointer;
-                display: inline-block
+                display: inline-block;
             }
 
                 .nav-links a:hover, .nav-links form:hover, .nav-links a.active {
                     color: var(--blue);
-                    border-color: var(--blue)
+                    border-color: var(--blue);
                 }
 
             .nav-links input {
@@ -75,7 +74,7 @@
                 padding: 5px 10px;
                 color: #c6d4df;
                 font-size: 0.82rem;
-                width: 130px
+                width: 130px;
             }
 
             .nav-links button {
@@ -88,24 +87,24 @@
                 font-size: 0.8rem;
                 font-weight: 600;
                 margin-left: 5px;
-                transition: opacity 0.2s
+                transition: opacity 0.2s;
             }
 
                 .nav-links button:hover {
-                    opacity: 0.85
+                    opacity: 0.85;
                 }
 
         .user-info {
             display: flex;
             align-items: center;
-            gap: 12px
+            gap: 12px;
         }
 
         .user-avatar {
             width: 34px;
             height: 34px;
             border-radius: 50%;
-            border: 2px solid var(--blue)
+            border: 2px solid var(--blue);
         }
 
         .logout-btn, .delete-btn {
@@ -117,48 +116,48 @@
             font-size: 0.85rem;
             border: 1px solid rgba(255,255,255,0.15);
             transition: all 0.2s;
-            cursor: pointer
+            cursor: pointer;
         }
 
             .logout-btn:hover {
                 background: rgba(255,68,68,0.15);
                 border-color: #ff4444;
-                color: #ff8888
+                color: #ff8888;
             }
 
         .delete-btn {
             background: rgba(255,68,68,0.15);
             border-color: #ff4444;
-            color: #ff8888
+            color: #ff8888;
         }
 
             .delete-btn:hover {
-                background: rgba(255,68,68,0.3)
+                background: rgba(255,68,68,0.3);
             }
 
         .page-wrap {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 30px 24px
+            padding: 30px 24px;
         }
 
         .alert {
             padding: 12px 16px;
             border-radius: 8px;
             margin-bottom: 20px;
-            font-size: 0.9rem
+            font-size: 0.9rem;
         }
 
         .alert-success {
             background: rgba(76,175,80,0.15);
             border: 1px solid rgba(76,175,80,0.35);
-            color: #8bc34a
+            color: #8bc34a;
         }
 
         .alert-error {
             background: rgba(220,53,69,0.15);
             border: 1px solid rgba(220,53,69,0.35);
-            color: #f18b97
+            color: #f18b97;
         }
 
         .profile-card {
@@ -170,42 +169,42 @@
             align-items: center;
             gap: 28px;
             flex-wrap: wrap;
-            margin-bottom: 28px
+            margin-bottom: 28px;
         }
 
         .profile-avatar-lg {
             width: 90px;
             height: 90px;
             border-radius: 50%;
-            border: 3px solid var(--blue)
+            border: 3px solid var(--blue);
         }
 
         .profile-meta h1 {
             font-size: 1.5rem;
             color: #e8f4fd;
-            margin-bottom: 4px
+            margin-bottom: 4px;
         }
 
         .profile-meta .steam-id {
             color: #5a7a99;
-            font-size: 0.82rem
+            font-size: 0.82rem;
         }
 
         .profile-meta a {
             color: var(--blue);
             font-size: 0.82rem;
-            text-decoration: none
+            text-decoration: none;
         }
 
             .profile-meta a:hover {
-                text-decoration: underline
+                text-decoration: underline;
             }
 
         .stat-row {
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
-            margin-left: auto
+            margin-left: auto;
         }
 
         .stat-box {
@@ -213,19 +212,19 @@
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 14px 22px;
-            text-align: center
+            text-align: center;
         }
 
         .stat-num {
             font-size: 1.8rem;
             font-weight: 700;
-            color: var(--blue)
+            color: var(--blue);
         }
 
         .stat-lbl {
             font-size: 0.75rem;
             color: #5a7a99;
-            margin-top: 2px
+            margin-top: 2px;
         }
 
         .btn-sync {
@@ -236,12 +235,12 @@
             border-radius: 8px;
             cursor: pointer;
             font-size: 0.9rem;
-            transition: all 0.2s
+            transition: all 0.2s;
         }
 
             .btn-sync:hover {
                 background: #3a5f7d;
-                color: #fff
+                color: #fff;
             }
 
         .section {
@@ -249,20 +248,20 @@
             border: 1px solid var(--border);
             border-radius: 14px;
             padding: 24px;
-            margin-bottom: 24px
+            margin-bottom: 24px;
         }
 
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px
+            margin-bottom: 20px;
         }
 
             .section-header h2 {
                 font-size: 1.05rem;
                 color: var(--blue);
-                font-weight: 600
+                font-weight: 600;
             }
 
         .btn-primary {
@@ -275,11 +274,11 @@
             font-size: 0.85rem;
             font-weight: 600;
             text-decoration: none;
-            transition: opacity 0.2s
+            transition: opacity 0.2s;
         }
 
             .btn-primary:hover {
-                opacity: 0.85
+                opacity: 0.85;
             }
 
         .btn-outline {
@@ -291,17 +290,17 @@
             cursor: pointer;
             font-size: 0.85rem;
             text-decoration: none;
-            transition: all 0.2s
+            transition: all 0.2s;
         }
 
             .btn-outline:hover {
-                background: rgba(102,192,244,0.1)
+                background: rgba(102,192,244,0.1);
             }
 
         .games-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill,minmax(180px,1fr));
-            gap: 16px
+            gap: 16px;
         }
 
         .game-card {
@@ -309,38 +308,38 @@
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 14px;
-            transition: all 0.2s
+            transition: all 0.2s;
         }
 
             .game-card:hover {
                 border-color: rgba(102,192,244,0.3);
                 transform: translateY(-3px);
-                background: rgba(255,255,255,0.07)
+                background: rgba(255,255,255,0.07);
             }
 
         .game-name {
             font-size: 0.9rem;
             font-weight: 600;
             color: #e8f4fd;
-            margin-bottom: 6px
+            margin-bottom: 6px;
         }
 
         .game-time {
             color: var(--blue);
-            font-size: 0.8rem
+            font-size: 0.8rem;
         }
 
         .empty-state {
             color: #5a7a99;
             font-size: 0.9rem;
             text-align: center;
-            padding: 30px 0
+            padding: 30px 0;
         }
 
         .groups-list {
             display: flex;
             flex-direction: column;
-            gap: 12px
+            gap: 12px;
         }
 
         .group-row {
@@ -350,29 +349,29 @@
             background: rgba(255,255,255,0.04);
             border: 1px solid var(--border);
             border-radius: 10px;
-            padding: 14px 18px
+            padding: 14px 18px;
         }
 
         .group-name {
             font-weight: 600;
-            color: #e8f4fd
+            color: #e8f4fd;
         }
 
         .group-meta {
             font-size: 0.8rem;
             color: #5a7a99;
-            margin-top: 2px
+            margin-top: 2px;
         }
 
         .group-actions {
             display: flex;
-            gap: 8px
+            gap: 8px;
         }
 
         .create-group-form {
             display: flex;
             gap: 10px;
-            flex-wrap: wrap
+            flex-wrap: wrap;
         }
 
         .form-input {
@@ -384,11 +383,11 @@
             padding: 9px 14px;
             color: #c6d4df;
             font-size: 0.9rem;
-            outline: none
+            outline: none;
         }
 
             .form-input:focus {
-                border-color: var(--blue)
+                border-color: var(--blue);
             }
 
         footer {
@@ -397,7 +396,7 @@
             color: #3a5268;
             font-size: 0.78rem;
             border-top: 1px solid var(--border);
-            margin-top: 20px
+            margin-top: 20px;
         }
 
         .online-dot {
@@ -405,26 +404,26 @@
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            margin-right: 5px
+            margin-right: 5px;
         }
 
         .green {
-            background: #4caf50
+            background: #4caf50;
         }
 
         .red {
-            background: #f44336
+            background: #f44336;
         }
 
         @media(max-width:700px) {
             .profile-card {
                 flex-direction: column;
-                text-align: center
+                text-align: center;
             }
 
             .stat-row {
                 margin-left: 0;
-                justify-content: center
+                justify-content: center;
             }
         }
     </style>
@@ -471,10 +470,7 @@
                     <a href="/profile/export/chart" class="btn-outline" style="font-size:0.78rem; padding:5px 10px;"> Chart</a>
                     <a href="/profile/add-game" class="btn-outline" style="font-size:0.78rem; padding:5px 10px;"> Add Game</a>
                 </div>
-                <form th:action="@{/users/by-id}" method="get" style="margin-top:8px;">
-                    <input type="number" name="userId" placeholder="Find by User ID" class="form-input" style="width:140px;">
-                    <button type="submit" class="btn-outline">Find</button>
-                </form>
+                <!-- "Find by User ID" form REMOVED -->
             </div>
             <div class="stat-row">
                 <div class="stat-box">
@@ -486,13 +482,13 @@
                     <div class="stat-lbl">Hours Played</div>
                 </div>
             </div>
-            <!-- Sync buttons (Steam only) -->
-            <div th:if="${isSteam}" style="display:flex; gap:10px; margin-top:12px;">
+            <!-- Sync buttons -->
+            <div th:if="${isSteam}" style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
                 <form action="/resync" method="post">
                     <button type="submit" class="btn-sync"> Sync Library</button>
                 </form>
                 <form action="/resync-achievements" method="post">
-                    <button type="submit" class="btn-sync"> Sync Achievements</button>
+                    <button type="submit" class="btn-sync">🎖️ Sync Achievements</button>
                 </form>
             </div>
         </div>
@@ -507,6 +503,13 @@
                 <form th:action="@{/groups/create}" method="post" class="create-group-form">
                     <input type="text" name="groupName" placeholder="Enter group name..." class="form-input" required>
                     <button type="submit" class="btn-primary">Create</button>
+                </form>
+            </div>
+            <!-- Join Group by pasting token -->
+            <div style="margin-bottom:16px;">
+                <form th:action="@{/groups/join}" method="post" style="display:flex; gap:8px;">
+                    <input type="text" name="token" placeholder="Paste invite token or link..." class="form-input" style="flex:1;" required>
+                    <button type="submit" class="btn-outline">Join Group</button>
                 </form>
             </div>
             <div class="groups-list" th:if="${groups != null and !groups.empty}">
@@ -524,13 +527,6 @@
             <div th:if="${groups == null or groups.empty}" class="empty-state">
                 You're not in any groups yet. Create one and invite your friends!
             </div>
-        </div>
-
-        <div style="margin-top:16px;">
-            <form th:action="@{/groups/join}" method="post" style="display:flex; gap:8px;">
-                <input type="text" name="token" placeholder="Paste invite token..." class="form-input" required>
-                <button type="submit" class="btn-outline">Join Group</button>
-            </form>
         </div>
 
         <!-- Friends List -->
@@ -571,16 +567,6 @@
                     <div class="game-name" th:text="${game.name}"></div>
                     <div class="game-time" th:text="${#numbers.formatInteger(game.playtimeForever/60,0,'COMMA')} + ' total hours'"></div>
                 </div>
-            </div>
-        </div>
-    </div>
-    <!-- Manual Games Section -->
-    <div class="section" th:if="${manualGames != null and !manualGames.empty}">
-        <div class="section-header"><h2>🎮 Manually Added Games</h2></div>
-        <div class="games-grid">
-            <div th:each="game : ${manualGames}" class="game-card">
-                <div class="game-name" th:text="${game.gameName}"></div>
-                <div class="game-time" th:text="'⏱️ ' + ${game.playtime} + ' min'"></div>
             </div>
         </div>
     </div>

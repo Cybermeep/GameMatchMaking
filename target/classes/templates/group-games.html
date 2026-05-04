@@ -167,15 +167,23 @@
     </table>
 
     <!-- Min playtime form for owner -->
-    <div th:if="${group.groupOwner.userID == currentUser.userID}" class="form-group">
-        <form th:action="@{/groups/{id}/playtime-requirement(id=${group.groupID})}" method="post" style="display:inline-block;">
+    <div th:if="${group.groupOwner.userID == currentUser.userID}" class="form-group" style="display: flex; align-items: center; gap: 10px;">
+        <form th:action="@{/groups/{id}/playtime-requirement(id=${group.groupID})}" method="post" style="display: inline-block;">
             <label>Min. playtime (minutes): <input type="number" name="minPlaytimeMinutes" min="0" style="width:80px"></label>
-            <button type="submit" class="btn-primary">Set</button>
+            <button type="submit" class="btn-primary" style="margin-left: 8px;">Set</button>
         </form>
         <!-- Reset Filters button -->
-        <a th:href="@{/groups/{id}/games(id=${group.groupID})}" class="btn-outline" style="margin-left:8px;"> Reset Filters</a>
+        <form th:action="@{/groups/{id}/reset-filters(id=${group.groupID})}" method="post" style="display: inline-block;">
+            <button type="submit" class="btn-outline"> Reset Filters</button>
+        </form>
     </div>
     <!-- Reset button for non-owner -->
+    <div th:unless="${group.groupOwner.userID == currentUser.userID}" style="margin-top:10px;">
+        <form th:action="@{/groups/{id}/reset-filters(id=${group.groupID})}" method="post" style="display: inline-block;">
+            <button type="submit" class="btn-outline"> Reset Filters</button>
+        </form>
+    </div>
+    <!-- Reset button for non-owner (just clears params) -->
     <div th:unless="${group.groupOwner.userID == currentUser.userID}" style="margin-top:10px;">
         <a th:href="@{/groups/{id}/games(id=${group.groupID})}" class="btn-outline"> Reset Filters</a>
     </div>
@@ -192,7 +200,7 @@
 
         <a th:href="@{/groups/{id}/games/csv(id=${group.groupID})}" class="btn-outline"> Export CSV</a>
 
-        <button onclick="shareGameList()" class="btn-outline"> Share Game List</button>
+        <button onclick="shareGameList()" class="btn-outline">🔗 Share Game List</button>
         <span id="shareUrl" style="margin-left:10px; font-size:0.9rem;"></span>
     </div>
 
